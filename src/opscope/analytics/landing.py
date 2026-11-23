@@ -12,6 +12,11 @@ truth:
 
 Only abilities that pass validation get estimates. Smokes, alarmbots, cameras and the like deal no damage,
 so there's nothing to check them against, and they stay as cast spots.
+
+Turrets (and Boom Bots) do deal damage, but at range: a turret's victims stand a median 23 m from where it was
+placed, and the damage event's actor is Killjoy (usually ~19 m away by then), not the turret. So their damage
+says where the enemies were, not where the device was, and they are excluded. A turret is placed right next to
+Killjoy, so its cast spot is already a good position.
 """
 from __future__ import annotations
 

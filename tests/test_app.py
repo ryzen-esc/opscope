@@ -14,3 +14,17 @@ def test_missing_cache_shows_setup_steps_instead_of_crashing(tmp_path, monkeypat
     assert not at.exception
     assert any("Build the cache" in w.value for w in at.warning)
     load.cache_clear()
+
+
+def test_every_page_renders_with_the_real_cache():
+    """Smoke test against the local cache (skipped where the data hasn't been built)."""
+    import pytest
+    from opscope.ingest.build import cache_dir
+    if not (cache_dir() / "games.parquet").exists():
+        pytest.skip("no local cache (build it with python -m opscope.ingest.build)")
+    from opscope.load import load
+    load.cache_clear()
+    at = AppTest.from_file(APP, default_timeout=300).run()
+    for page in ("views/report.py", "views/operator.py", "views/utility.py", "views/about.py"):
+        at.switch_page(page).run()
+        assert not at.exception, (page, [e.value for e in at.exception])

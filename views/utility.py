@@ -132,7 +132,7 @@ with left:
                                arrows=arrows and not landing_view)
     if show_spots and not strong.empty:
         add_spots(fig, strong, SPOT_RADIUS_CM)
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
+    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "displaylogo": False})
     if landing_view:
         val = landing_model()["validation"]
         n_est = int(casts["land_x"].notna().sum())
@@ -161,7 +161,7 @@ with right:
         show["Agent"] = show["Agent"].str.title()
         show["Ability"] = show["Ability"].map(pretty)
         st.dataframe(show[["Player", "Agent", "Ability", "Casts", "Used in", "Per round"]], hide_index=True,
-                     use_container_width=True, height=min(420, 38 + 35 * len(show)))
+                     width="stretch", height=min(420, 38 + 35 * len(show)))
     st.subheader("When it's used")
     if not casts.empty:
         window = casts.assign(window=casts["phase"].map({"buy": "buy phase"}).fillna(casts["bucket"].astype(str)))
@@ -170,5 +170,5 @@ with right:
                       color_discrete_sequence=["#00AEEF"])
         figt.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0), xaxis_title=None, yaxis_title="casts",
                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figt, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(figt, width="stretch", config={"displayModeBar": False})
         st.caption("Time after the buy phase ends. Pre-round setups (buy phase) are shown separately.")

@@ -85,12 +85,14 @@ standing where it landed.
    a fixed distance. The victims' spread inside the area limits how small this check can go.
 
 Estimates are shown only for the {len(lm['model'])} abilities this improves. Smokes, alarmbots, cameras and the like
-deal no damage, so they can't be checked, and they stay at the cast spot.
+deal no damage, so they can't be checked, and they stay at the cast spot. **Turrets** do deal damage, but at range:
+the players a turret hits stand about 23 m from where it was placed, so their positions say where the enemies were,
+not where the turret was. A turret is placed right next to Killjoy, so its cast spot is already a good position.
 """)
         st.dataframe(
             [{"Ability": a.replace("-", " ").title(), "Test casts": s["n"], "Miss with cast spot (m)": s["cast"],
               "Miss with estimate (m)": s["model"]} for a, s in sorted(v["abilities"].items())],
-            hide_index=True, use_container_width=True)
+            hide_index=True, width="stretch")
     except Exception as exc:  # missing cache etc.: the rest of the page still works
         st.caption(f"Landing model not available yet ({exc}).")
 with st.expander("Sites and named areas"):

@@ -99,7 +99,7 @@ with left:
         tmp = shown.assign(time=shown["t"].round(0).astype(int).astype(str) + "s", via=shown["source"],
                            area=nearest_callout(map_name, shown["x"], shown["y"]))
         add_points_by_bucket(fig, tmp, ["player_name", "agent", "area", "time", "via"])
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
+    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "displaylogo": False})
     gun_rounds_map = int(r.holders["map"].eq(map_name).sum())
     seen_rounds = shown[["game_id", "round_num"]].drop_duplicates().shape[0]
     st.caption(f"Shaded area and dots: every position recorded for the {gun} holder in the chosen time windows "
@@ -127,7 +127,7 @@ with right:
                       color_discrete_sequence=["#00AEEF"])
         figh.update_layout(height=260, margin=dict(l=0, r=0, t=0, b=0), yaxis=dict(autorange="reversed", title=None),
                            xaxis_title=f"{gun} rounds", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figh, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(figh, width="stretch", config={"displayModeBar": False})
     st.subheader("When it fires")
     fb = r.first_shot_buckets()
     if fb["rounds"].sum():
@@ -135,7 +135,7 @@ with right:
                       color_discrete_map={"0–20s": "#00AEEF", "20–40s": "#7BD389", "40–60s": "#F5B700", "60s+": "#F25F5C"})
         figt.update_layout(height=230, showlegend=False, margin=dict(l=0, r=0, t=0, b=0), xaxis_title="first shot after buy phase",
                            yaxis_title="rounds", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figt, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(figt, width="stretch", config={"displayModeBar": False})
         st.caption(f"{gun} fired in {of(int(fb['rounds'].sum()), r.n_gun_rounds, f'{gun} rounds')}.")
     else:
         st.caption(f"The {gun} never fired in these rounds.")
@@ -151,5 +151,5 @@ figm.add_hline(y=league_rate, line_dash="dot", line_color="#8b9bab",
                annotation_text=f"league {league_rate:.0%}", annotation_font_color="#8b9bab")
 figm.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), yaxis_tickformat=".0%", yaxis_title=f"{unit} with {gun}",
                    xaxis_title=None, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-st.plotly_chart(figm, use_container_width=True, config={"displayModeBar": False})
+st.plotly_chart(figm, width="stretch", config={"displayModeBar": False})
 st.caption("Bar labels show rounds with the gun / rounds played. League line uses the same side, patch and event filters.")

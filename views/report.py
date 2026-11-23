@@ -92,7 +92,7 @@ mp = pool.assign(Map=pool["map"].str.title(),
                  Attack=[f"{pct(w, n):.0%} ({w}/{n})" for w, n in zip(pool["atk_won"], pool["atk_n"])],
                  Defense=[f"{pct(w, n):.0%} ({w}/{n})" for w, n in zip(pool["def_won"], pool["def_n"])])
 mp = mp.rename(columns={"games": "Maps"})
-st.dataframe(mp[["Map", "Maps", "Record", "Attack", "Defense"]], hide_index=True, use_container_width=True)
+st.dataframe(mp[["Map", "Maps", "Record", "Attack", "Defense"]], hide_index=True, width="stretch")
 
 # ---- one map in detail --------------------------------------------------------------------------
 st.subheader("Map breakdown")
@@ -123,7 +123,7 @@ with left:
                   + (f" ({i.tags['area']})" if i.tags.get("area") else "") for i in hab], textposition="top center",
             textfont=dict(color="#00AEEF", size=11), marker=dict(size=11, color="#00AEEF", symbol="diamond"),
             name="predictable utility", hoverinfo="text"))
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
+    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "displaylogo": False})
     st.caption("Rings: bomb sites with this team's plant count. Diamonds: utility this team places more predictably "
                "than a typical player. Sites are found from where teams plant; names match the official callouts.")
 
@@ -142,7 +142,7 @@ with right:
         figp.update_layout(height=60 + 60 * len(sp), barmode="group", margin=dict(l=0, r=0, t=0, b=0),
                            xaxis_tickformat=".0%", legend=dict(orientation="h", y=-0.25),
                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figp, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(figp, width="stretch", config={"displayModeBar": False})
         st.caption(f"{len(team_pl)} planted attack rounds out of {len(tr)} attack rounds on {map_name.title()}.")
     else:
         st.caption("No plants recorded for this team on this map.")
