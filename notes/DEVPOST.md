@@ -9,7 +9,7 @@ Scouting a VALORANT opponent means hours of VOD review to answer simple question
 
 ## What it does
 OpScope reads every recorded event from 2,079 pro maps (3.5M events) and builds:
-- **Scouting report:** pick an opponent and get a **game plan**. These are counters to their most unusual tendencies, written from your side ("Expect Odin spam near A Door when you attack Lotus: they bring an Odin in 47 of 117 defense rounds; other VCT 2025 teams: 12%"). Then ranked key tendencies, the map pool, and a per-map breakdown of plant sites and predictable utility. Pick Cloud9 and it becomes a **predictability check**: what opponents scouting Cloud9 would see.
+- **Scouting report:** pick an opponent and get a **game plan**. These are counters to their most unusual tendencies, written from your side ("Expect Odin spam near A Door when you attack Lotus: they bring an Odin in 47 of 117 defense rounds; typical VCT 2025 team: 11%"). Then ranked key tendencies, the map pool, and a per-map breakdown of plant sites and predictable utility. Pick Cloud9 and it becomes a **predictability check**: what opponents scouting Cloud9 would see.
 - **Operator profiler:** who buys the Op/Odin/Outlaw/Marshal, how often vs the league, where the holder sits by time in the round, kill sightlines, timing, pickups, and full-buy win rates.
 - **Utility profiler:** where traps, recon, smokes, stalls and flashes go, before or during the round. **Habit spots** a player reuses round after round, and **validated landing estimates** for damaging utility.
 
@@ -24,7 +24,7 @@ Every number shows its sample ("30 of 80 rounds"). Teams are compared only with 
   - area names from community callouts, verified to share GRID's coordinates
   - a landing-spot model validated on held-out matches
 - **UI:** Streamlit + Plotly, with a minimap drawn from 1.4M recorded positions (no Riot art).
-- **Tests:** 38, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
+- **Tests:** 40, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
 - **Tools:** built in **PyCharm** with **Junie**, **JetBrains AI Assistant** and **Claude Code**. See "JetBrains tools" below and AI_SHOWCASE.md.
 
 ## Challenges we ran into

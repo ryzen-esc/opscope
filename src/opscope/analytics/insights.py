@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, league_scope, positions, team_rounds
-from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
+from opscope.analytics.stats import MIN_SAMPLE, of, pct, typical_rate, wilson
 from opscope.analytics.utility import UtilityScope, utility_report
 from opscope.ingest.build import cache_dir
 from opscope.analytics.roster import last_event_with, latest_roster, short_event
@@ -41,13 +41,17 @@ class Insight:
     score: float = 0.0
     tags: dict = field(default_factory=dict)
     departed: str | None = None  # set when the insight's player isn't on the team's latest roster
-    peers: str = "other teams"   # who the league rate comes from, e.g. "other VCT 2025 teams"
+    peers: str = "other teams"   # who the league rate comes from, e.g. "typical VCT 2025 team"
+    baseline: float | None = None  # the comparison rate actually used (typical team), if not the pooled one
+
     @property
     def sample(self) -> str:
         return of(self.k, self.n, self.unit)
 
     @property
     def league_rate(self) -> float | None:
+        if self.baseline is not None:
+            return self.baseline
         return pct(*self.league) if self.league and self.league[1] else None
 
 
@@ -110,12 +114,15 @@ def gun_insights(s: Scope) -> list[Insight]:
         lg = flag(league[league["team_id"] != s.team_id])  # league = everyone else
         tg = t.groupby(["map", "side"])["has"].agg(["sum", "size"])
         lgg = lg.groupby(["map", "side"])["has"].agg(["sum", "size"])
+        per_team = lg.groupby(["map", "side", "team_id"])["has"].agg(["sum", "size"])
         for (m, side), row in tg.iterrows():
             k, n = int(row["sum"]), int(row["size"])
             if n < 2 * MIN_SAMPLE or (m, side) not in lgg.index:
                 continue
             lk, ln = (int(v) for v in lgg.loc[(m, side)])
-            lr = pct(lk, ln)
+            pt = per_team.loc[(m, side)]
+            lr, method = typical_rate(pt["sum"], pt["size"])
+            peer = f"typical {who_lg} team" if method == "typical team" else f"all other {who_lg} rounds"
             sc = surprise(k, n, lr)
             if sc <= 0:
                 continue
@@ -136,9 +143,9 @@ def gun_insights(s: Scope) -> list[Insight]:
             out.append(Insight(
                 category="Operator", map=m, side=side,
                 text=f"{verb.capitalize()} buy the <b>{label}</b> on {SIDE_WORD[side]} on <b>{m.title()}</b>: "
-                     f"<b>{of(k, n, SIDE_WORD[side] + ' rounds')}</b> ({who_lg} teams: {lr:.0%}).{who}",
+                     f"<b>{of(k, n, SIDE_WORD[side] + ' rounds')}</b> ({peer}: {lr:.0%}).{who}",
                 k=k, n=n, unit=f"{SIDE_WORD[side]} rounds", league=(lk, ln), score=sc + (0.05 if more else 0),
-                peers=f"other {who_lg} teams",
+                peers=peer, baseline=lr,
                 tags=tags))
     return out
 
@@ -165,7 +172,9 @@ def plant_insights(s: Scope) -> list[Insight]:
             lk, ln = int((lgm["site"] == site).sum()), len(lgm)
             if not ln:
                 continue
-            lr = pct(lk, ln)
+            per_team = lgm.assign(hit=lgm["site"] == site).groupby("team_id")["hit"].agg(["sum", "size"])
+            lr, method = typical_rate(per_team["sum"], per_team["size"], min_rounds=MIN_SAMPLE)
+            peer = f"typical {who_lg} team" if method == "typical team" else f"all other {who_lg} plants"
             sc = surprise(int(k), n, lr)
             more = pct(int(k), n) > lr
             if sc <= 0 or not more:
@@ -173,8 +182,8 @@ def plant_insights(s: Scope) -> list[Insight]:
             out.append(Insight(
                 category="Attack", map=m, side="attacker",
                 text=f"On <b>{m.title()}</b> attack they plant <b>{site}</b> in <b>{of(int(k), n, 'planted rounds')}</b> "
-                     f"({who_lg} teams: {lr:.0%}).",
-                k=int(k), n=n, unit="planted rounds", league=(lk, ln), score=sc, peers=f"other {who_lg} teams",
+                     f"({peer}: {lr:.0%}).",
+                k=int(k), n=n, unit="planted rounds", league=(lk, ln), score=sc, peers=peer, baseline=lr,
                 tags={"site": site, "direction": "more" if more else "less"}))
     return out
 

@@ -33,10 +33,11 @@ How OpScope turns raw match events into scouting, what each number means, how it
 
 Every claim carries its sample: **"k of n rounds"**.
 
-- **League (comparison group):** the same rate for every *other* team in the **same tier and season** (VCT 2025, Game Changers 2025, or Game Changers 2026), on the same map and side, with the same patch and event filters. Tiers and seasons are kept apart because they play on different patches and at different levels: the defense Op rate on Lotus is 10% in VCT 2025 but 17% in Game Changers. An early version compared everyone with everyone, which overstated VCT teams' differences (e.g. Cloud9's Lotus Op rate against "16%" instead of the fair 11%).
+- **League (comparison group):** the same rate for every *other* team in the **same tier and season** (VCT 2025, Game Changers 2025, or Game Changers 2026), on the same map and side, with the same patch and event filters. Tiers and seasons are kept apart because they play on different patches and at different levels: the defense Op rate on Lotus is 10% in VCT 2025 but 17% in Game Changers. An early version compared everyone with everyone, which overstated VCT teams' differences.
+- **Typical team, not pooled rounds:** the comparison rate is the **median of each other team's own rate** (teams with at least 16 rounds; at least 4 such teams, otherwise it falls back to all rounds pooled). Pooling lets one extreme team drag the rate: in the worst cases one team held 28–49% of a group's gun rounds and moved the pooled rate by 8–12 points. Across 128 weapon/map/side groups the two methods differ by a median of 2.3 points. For rarely used guns the typical team is often at 0%, which is the honest answer: most teams never do it. For Cloud9 on Lotus the result is 2 of 134 Op rounds against 8% for the typical VCT 2025 team (16% in the first, mixed-tier version).
 - **95% range:** a Wilson score interval.
 - **Too few to call:** percentages are hidden below 8 rounds.
-- **When something is a tendency:** only when the team's 95% range does not overlap the league rate. The **surprise** score is the gap between them (0 if they overlap), so findings that are both unusual and well sampled rank first:
+- **When something is a tendency:** only when the team's 95% range does not overlap the comparison rate. The **surprise** score is the gap between them (0 if they overlap), so findings that are both unusual and well sampled rank first:
 
   ```
   surprise = max(0, lower95 − league, league − upper95)
@@ -99,7 +100,7 @@ GRID doesn't record where utility lands. **Damaging** utility leaves evidence, t
 
 Each ranked tendency (about players still on the roster) becomes one short, rule-based suggestion that cites its evidence, at most one per map, side and category:
 
-- **Opponent mode** is written from your side: their defense is your attack. For example, "Expect Odin spam near A Door when you attack Lotus. They bring an Odin in 47 of 117 defense rounds (other VCT 2025 teams: 12%)…"
+- **Opponent mode** is written from your side: their defense is your attack. For example, "Expect Odin spam near A Door when you attack Lotus. They bring an Odin in 47 of 117 defense rounds (typical VCT 2025 team: 11%)…"
 - **Self-scout mode** (Cloud9's own teams) turns the same tendencies into what an opponent would see.
 
 The rules are simple and readable by design. They're prompts for prep, not orders.

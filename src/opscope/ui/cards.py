@@ -18,7 +18,7 @@ def stat_card(title: str, value: str, sample: str, context: str | None = None, t
 
 
 def rate_card(title: str, k: int, n: int, unit: str = "rounds", league: tuple[int, int] | None = None,
-              league_label: str = "league",
+              league_label: str = "league", league_rate: float | None = None,
               higher_is: str = "neutral") -> None:
     """Percentage card that refuses to make a claim on tiny samples."""
     if n < MIN_SAMPLE:
@@ -27,7 +27,7 @@ def rate_card(title: str, k: int, n: int, unit: str = "rounds", league: tuple[in
     lo, hi = wilson(k, n)
     context, tone = None, "accent"
     if league and league[1]:
-        lp = pct(*league)
+        lp = league_rate if league_rate is not None else pct(*league)
         context = f"{league_label} {lp:.0%} · 95% range {lo:.0%}–{hi:.0%}"
         if higher_is != "neutral" and not (lo <= lp <= hi):
             above = pct(k, n) > lp
@@ -62,7 +62,7 @@ def insight_card(ins) -> None:
     """A ranked scouting insight: category chip, map/side, sentence, sample and league context."""
     color = CATEGORY_COLORS.get(ins.category, "#8b9bab")
     side = {"attacker": "attack", "defender": "defense"}.get(ins.side, ins.side)
-    league = f" · others {ins.league_rate:.0%}" if ins.league_rate is not None else ""
+    league = f" · {getattr(ins, 'peers', 'others')} {ins.league_rate:.0%}" if ins.league_rate is not None else ""
     former = (f'<div class="ops-ctx" style="color:#F5B700">⚠ Former player: {ins.departed}</div>'
               if getattr(ins, "departed", None) else "")
     st.markdown(

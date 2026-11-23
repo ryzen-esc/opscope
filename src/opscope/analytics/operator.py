@@ -17,6 +17,7 @@ from functools import cache
 import numpy as np
 import pandas as pd
 
+from opscope.analytics.stats import typical_rate
 from opscope.load import Dataset, cohort_label, load
 from opscope.maps import aggression
 
@@ -128,6 +129,8 @@ class OperatorReport:
     league_share: tuple[int, int] = (0, 0)
     league_aggression: np.ndarray = field(default_factory=lambda: np.array([]))
     league_label: str = "league"     # e.g. "VCT 2025": who the team is compared with
+    league_rate: float = 0.0         # comparison rate: typical team (median), or pooled if too few teams
+    league_method: str = "all rounds"
 
     # ---- headline numbers -----------------------------------------------------------------
     @property
@@ -247,10 +250,15 @@ def operator_report(s: Scope) -> OperatorReport:
     lg_tr = lg_tr[lg_tr["team_id"] != s.team_id]  # the league is everyone else
     lg_h = _holders(d, lg_tr, s.weapon)
     lg_share = (len(set(zip(lg_h["game_id"], lg_h["round_num"], lg_h["team_id"]))), len(lg_tr))
+    lg_keys = set(zip(lg_h["game_id"], lg_h["round_num"], lg_h["team_id"]))
+    lg_flag = lg_tr.assign(has=np.array([k in lg_keys for k in zip(lg_tr["game_id"], lg_tr["round_num"], lg_tr["team_id"])],
+                                        dtype=bool))
+    per_team = lg_flag.groupby("team_id")["has"].agg(["sum", "size"])
+    lg_rate, lg_method = typical_rate(per_team["sum"], per_team["size"]) if len(per_team) else (0.0, "all rounds")
     lg_setups = _setups(_holder_positions(lg_h[lg_h["team_id"] != s.team_id])) if s.maps else pd.DataFrame()
     lg_aggr = lg_setups["aggression"].dropna().to_numpy(float) if not lg_setups.empty else np.array([])
 
     pos = _holder_positions(h)
     return OperatorReport(scope=s, rounds=tr, holders=h, positions=pos, setups=_setups(pos), sightlines=sight,
                           shots=e, pickups=pickups, league_share=lg_share, league_aggression=lg_aggr,
-                          league_label=cohort_label(lg.cohorts))
+                          league_label=cohort_label(lg.cohorts), league_rate=lg_rate, league_method=lg_method)

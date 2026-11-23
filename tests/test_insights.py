@@ -32,3 +32,20 @@ def test_assign_site_uses_nearest_named_centre(monkeypatch):
     monkeypatch.setattr(zones, "sites", lambda: fake)
     assert list(assign_site("testmap", [100, 900], [0, 50])) == ["A", "B"]
     assert list(assign_site("unknown", [0], [0])) == [None]
+
+
+def test_typical_rate_resists_one_extreme_team():
+    from opscope.analytics.stats import typical_rate
+    # five teams around 10%, one team at 90% with lots of rounds
+    k = [2, 2, 2, 3, 2, 90]
+    n = [20, 20, 20, 20, 20, 100]
+    rate, method = typical_rate(k, n)
+    pooled = sum(k) / sum(n)
+    assert method == "typical team" and abs(rate - 0.10) < 0.01
+    assert pooled > 0.4                                # pooling lets one team dominate
+
+
+def test_typical_rate_falls_back_when_too_few_teams_qualify():
+    from opscope.analytics.stats import typical_rate
+    rate, method = typical_rate([5, 1, 1], [40, 10, 10])   # only one team has 16+ rounds
+    assert method == "all rounds" and abs(rate - 7 / 60) < 1e-9
