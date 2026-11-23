@@ -8,6 +8,7 @@ inject_css()
 
 pages = [
     st.Page("views/operator.py", title="Operator profiler", icon=":material/my_location:", default=True),
+    st.Page("views/utility.py", title="Utility profiler", icon=":material/scatter_plot:"),
 ]
 st.sidebar.markdown("## OpScope")
 st.sidebar.caption("VALORANT scouting for Cloud9")

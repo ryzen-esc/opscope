@@ -50,7 +50,11 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
   - Checked: opponent filter, Odin (NRG: s0m Omen / brawk Sova), C9 GC (marceline), attack side and empty scopes. Empty frames need explicit bool dtypes in pandas 3.
 - **Tests:** `tests/` holds synthetic-fixture pytest tests for ingest (Junie drafted them, Claude reviewed and extended them); `uv run pytest` gives 8 passing. Rollback tests were mutation-checked.
 - **PyCharm:** `.idea/` committed (src = source root, cache excluded); shared run configs in `.run/`. JetBrains AI Ultimate is active with data collection off. Workflow: JetBrains AI drafts small, well-specified tasks; Claude reviews and fixes; log both in `notes/AI_WORKFLOW_LOG.md`.
-- Next: M3 utility heatmaps.
+- **M3 (Utility profiler) first version works:** `analytics/utility.py` (UtilityScope → UtilityReport, with `repeat_spots` greedy 4 m clustering that counts rounds, not casts), page `views/utility.py`, and the minimap gained ability-colored points, aim arrows and numbered habit rings.
+  - Real findings: neT's Viper puts Toxic Screen in the same spot in 70 of 71 Lotus defense rounds; neT's Deadlock sensor in 24 of 34.
+  - Habit denominators are "rounds the player was on that agent" (from loadouts), not rounds they used the ability.
+  - Gotcha: `df.map` is the DataFrame method, so always write `df["map"]`. Streamlit multiselects keep stale selections, so key them by their context.
+- Next: M4, the scouting report page (insight cards across Op and utility, league baselines, named zones).
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.

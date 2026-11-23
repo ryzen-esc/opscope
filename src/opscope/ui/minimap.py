@@ -78,6 +78,47 @@ def add_density(fig: go.Figure, df: pd.DataFrame, map_name: str, rgb: str = "0,1
     ))
 
 
+CATEGORY_COLORS = ["#00AEEF", "#F5B700", "#7BD389", "#F25F5C", "#B388EB", "#4DD0E1", "#FF9F68", "#E0E0E0"]
+
+
+def add_points_by_category(fig: go.Figure, df: pd.DataFrame, category: str, hover_cols: list[str],
+                           arrows: bool = False, arrow_cm: float = 700) -> dict[str, str]:
+    """One colored trace per category value (e.g. per ability); optional aim arrows from the view vector.
+
+    Returns the color used for each category so the page can reuse it.
+    """
+    colors = {}
+    order = df[category].value_counts().index.tolist()
+    for i, value in enumerate(order):
+        color = CATEGORY_COLORS[i % len(CATEGORY_COLORS)]
+        colors[value] = color
+        part = df[df[category] == value]
+        if arrows and {"view_x", "view_y"} <= set(part.columns):
+            aim = part.dropna(subset=["view_x", "view_y"])
+            if not aim.empty:
+                xs = np.column_stack([aim["x"], aim["x"] + aim["view_x"] * arrow_cm, np.full(len(aim), np.nan)]).ravel()
+                ys = np.column_stack([aim["y"], aim["y"] + aim["view_y"] * arrow_cm, np.full(len(aim), np.nan)]).ravel()
+                fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", line=dict(color=color, width=1),
+                                         opacity=0.5, hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(
+            x=part["x"], y=part["y"], mode="markers", name=str(value),
+            marker=dict(size=7, color=color, line=dict(width=0.5, color="#0e1117"), opacity=0.85),
+            customdata=part[hover_cols].to_numpy(),
+            hovertemplate="<br>".join(f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(hover_cols)) + "<extra></extra>",
+        ))
+    return colors
+
+
+def add_spots(fig: go.Figure, spots: pd.DataFrame, radius_cm: float, label_col: str = "label") -> None:
+    """Numbered rings for habitual spots."""
+    for _, s in spots.iterrows():
+        fig.add_shape(type="circle", x0=s.x - radius_cm, x1=s.x + radius_cm, y0=s.y - radius_cm, y1=s.y + radius_cm,
+                      line=dict(color="#ffffff", width=2), fillcolor="rgba(255,255,255,0.08)")
+    fig.add_trace(go.Scatter(
+        x=spots["x"], y=spots["y"] + radius_cm * 1.6, mode="text", text=spots[label_col],
+        textfont=dict(color="#ffffff", size=13), hoverinfo="skip", showlegend=False))
+
+
 def add_points_by_bucket(fig: go.Figure, df: pd.DataFrame, hover_cols: list[str]) -> None:
     for bucket, color in BUCKET_COLORS.items():
         part = df[df["bucket"] == bucket]
