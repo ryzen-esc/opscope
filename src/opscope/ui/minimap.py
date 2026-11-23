@@ -49,14 +49,43 @@ def add_sightlines(fig: go.Figure, df: pd.DataFrame, color: str = "rgba(242,95,9
                              marker=dict(symbol="x", size=6, color=color), hoverinfo="skip", showlegend=False))
 
 
+def _blur(h: np.ndarray, sigma: float) -> np.ndarray:
+    """Separable Gaussian blur with plain numpy (no scipy dependency)."""
+    r = max(1, int(3 * sigma))
+    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+    k /= k.sum()
+    h = np.apply_along_axis(lambda v: np.convolve(v, k, mode="same"), 0, h)
+    return np.apply_along_axis(lambda v: np.convolve(v, k, mode="same"), 1, h)
+
+
+def add_density(fig: go.Figure, df: pd.DataFrame, map_name: str, rgb: str = "0,174,239",
+                bin_cm: float = 300, sigma_bins: float = 1.3) -> None:
+    """Soft density cloud of positions (3 m bins, blurred to match the ±1–4 m position error)."""
+    if len(df) < 3:
+        return
+    bd = backdrop(map_name)
+    ny_px, nx_px = bd.z.shape
+    x1, y1 = bd.x0 + nx_px * bd.bin, bd.y0 + ny_px * bd.bin
+    nx, ny = int((x1 - bd.x0) // bin_cm) + 1, int((y1 - bd.y0) // bin_cm) + 1
+    h, _, _ = np.histogram2d(df["y"], df["x"], bins=[ny, nx],
+                             range=[[bd.y0, bd.y0 + ny * bin_cm], [bd.x0, bd.x0 + nx * bin_cm]])
+    z = _blur(h, sigma_bins)
+    z = z / z.max() if z.max() > 0 else z
+    fig.add_trace(go.Heatmap(
+        z=np.where(z > 0.12, z, np.nan), x0=bd.x0 + bin_cm / 2, dx=bin_cm, y0=bd.y0 + bin_cm / 2, dy=bin_cm,
+        colorscale=[[0, f"rgba({rgb},0.15)"], [1, f"rgba({rgb},0.75)"]], zmin=0.12, zmax=1,
+        showscale=False, hoverinfo="skip", name="density", zsmooth="best",
+    ))
+
+
 def add_points_by_bucket(fig: go.Figure, df: pd.DataFrame, hover_cols: list[str]) -> None:
     for bucket, color in BUCKET_COLORS.items():
         part = df[df["bucket"] == bucket]
         if part.empty:
             continue
         fig.add_trace(go.Scatter(
-            x=part["x"], y=part["y"], mode="markers", name=f"first seen {bucket}",
-            marker=dict(size=10, color=color, line=dict(width=1, color="#0e1117"), opacity=0.9),
+            x=part["x"], y=part["y"], mode="markers", name=bucket,
+            marker=dict(size=8, color=color, line=dict(width=1, color="#0e1117"), opacity=0.85),
             customdata=part[hover_cols].to_numpy(),
             hovertemplate="<br>".join(f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(hover_cols)) + "<extra></extra>",
         ))

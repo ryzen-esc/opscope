@@ -19,3 +19,14 @@ cache/
 # Keep .idea/ and .junie/ committed (rules encourage it), but skip personal files
 .idea/workspace.xml
 .idea/shelf/
+.idea/usage.statistics.xml
+.idea/tasks.xml
+.idea/dictionaries/
+.idea/dataSources/
+.idea/dataSources.local.xml
+.idea/dataSources.xml
+.idea/httpRequests/
+.idea/copilot*
+
+# Streamlit local secrets
+.streamlit/secrets.toml

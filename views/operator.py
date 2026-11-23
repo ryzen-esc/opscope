@@ -2,11 +2,11 @@
 import plotly.express as px
 import streamlit as st
 
-from opscope.analytics.operator import Scope, operator_report
+from opscope.analytics.operator import SETUP_WINDOW, Scope, operator_report
 from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
-from opscope.ui.cards import insight, rate_card, stat_card
+from opscope.ui.cards import insight, rate_card
 from opscope.ui.filters import sidebar, team_name
-from opscope.ui.minimap import add_points_by_bucket, add_sightlines, base_map
+from opscope.ui.minimap import BUCKET_COLORS, add_density, add_points_by_bucket, add_sightlines, base_map
 
 WEAPONS = {"Operator": "operator", "Odin": "odin", "Outlaw": "outlaw", "Marshal": "marshal"}
 
@@ -81,24 +81,35 @@ with left:
         gun_maps = maps[maps["gun_rounds"] > 0].sort_values("gun_rounds", ascending=False)
         options = list(gun_maps["map"]) or list(maps["map"])
         map_name = st.selectbox("Map", options, format_func=str.title, key="op_map")
-    setups = r.setups[r.setups["map"] == map_name] if not r.setups.empty else r.setups
+    pos = r.positions[r.positions["map"] == map_name]
     sight = r.sightlines[r.sightlines["map"] == map_name]
-    show_lines = st.toggle("Show kill sightlines", value=True)
+    bucket_names = list(BUCKET_COLORS)
+    ctl1, ctl2 = st.columns([3, 1])
+    with ctl1:
+        buckets = st.multiselect("Time in round", bucket_names, default=bucket_names[:2], key="op_buckets") or bucket_names
+    with ctl2:
+        show_lines = st.toggle("Kill lines", value=True)
+    shown = pos[pos["bucket"].isin(buckets)]
     fig = base_map(map_name)
+    add_density(fig, shown, map_name)
     if show_lines:
         add_sightlines(fig, sight, name=f"{gun} kills")
-    if not setups.empty:
-        tmp = setups.assign(time=setups["t"].round(0).astype(int).astype(str) + "s", via=setups["source"])
+    if not shown.empty:
+        tmp = shown.assign(time=shown["t"].round(0).astype(int).astype(str) + "s", via=shown["source"])
         add_points_by_bucket(fig, tmp, ["player_name", "agent", "time", "via"])
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
     gun_rounds_map = int(r.holders["map"].eq(map_name).sum())
-    st.caption(f"Dots: first position seen for the {gun} holder ({of(len(setups), gun_rounds_map, f'{gun} rounds')} on {map_name.title()}). "
-               f"Lines: {len(sight)} {gun} kills, shooter → victim. Positions are periodic samples (±1–4 m).")
+    seen_rounds = shown[["game_id", "round_num"]].drop_duplicates().shape[0]
+    st.caption(f"Shaded area and dots: every position recorded for the {gun} holder in the chosen time windows "
+               f"({len(shown)} positions from {of(seen_rounds, gun_rounds_map, f'{gun} rounds')} on {map_name.title()}). "
+               f"GRID records a position only when a player shoots, gets hit or uses an ability, so quiet rounds "
+               f"leave gaps. Lines: {len(sight)} {gun} kills, shooter → victim. Positions are ±1–4 m.")
     a = r.aggression_summary() if f["maps"] else None
     if a and a["median"] is not None and a["n"] >= MIN_SAMPLE:
         style = "aggressive" if a["percentile"] >= 0.6 else "passive" if a["percentile"] <= 0.4 else "typical"
-        insight(f"Setup style on {map_name.title()}: <b>{style}</b>. Median setup is further forward than "
-                f"<b>{a['percentile']:.0%}</b> of league {gun} setups (n = {a['n']}).")
+        insight(f"Early setup on {map_name.title()} (first {SETUP_WINDOW:.0f}s): <b>{style}</b>. The median position is "
+                f"further forward than <b>{a['percentile']:.0%}</b> of other teams' {gun} setups "
+                f"(seen in {of(a['n'], gun_rounds_map, f'{gun} rounds')}).")
 
 with right:
     st.subheader("Who holds it")

@@ -46,8 +46,11 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
   - Side per round comes from the round segment at freeze end, not from `games.csv`.
 - Ability classes live in `taxonomy.py` and are applied at load time (no rebuild needed).- **M2 (Operator profiler) first version works:** `analytics/operator.py` (Scope → OperatorReport), `maps.py` (data-drawn backdrop, spawns, aggression), `ui/{minimap,cards,filters}.py`, page `views/operator.py`, wired in `app.py` via `st.navigation`. Theme in `.streamlit/config.toml`.
   - Real findings: OXY holds C9's Op in 93 of 96 defense Op rounds; C9 Ops 30 of 80 Haven defense rounds but only 2 of 134 on Lotus.
-  - Known weakness: "setup spot" = first live position seen for the holder (events only), often late in the round. The plant snapshot isn't used yet.
-- Still open: synthetic-fixture tests for `ingest/feed.py` (a Junie task); M2 polish (setup heat/density, plant-snapshot positions, opponent filter check, Odin view); then M3 utility heatmaps.
+  - Positions are sparse: only events carry them, and the median first sighting of an Op holder is 32 s in. So the map shows a blurred density (3 m bins) of *all* holder positions, filtered by time bucket. "Early setup" = first position within 30 s, and coverage is always reported (e.g. 14 of 30 rounds).
+  - Checked: opponent filter, Odin (NRG: s0m Omen / brawk Sova), C9 GC (marceline), attack side and empty scopes. Empty frames need explicit bool dtypes in pandas 3.
+- **Tests:** `tests/` holds synthetic-fixture pytest tests for ingest (Junie drafted them, Claude reviewed and extended them); `uv run pytest` gives 8 passing. Rollback tests were mutation-checked.
+- **PyCharm:** `.idea/` committed (src = source root, cache excluded); shared run configs in `.run/`. JetBrains AI Ultimate is active with data collection off. Workflow: JetBrains AI drafts small, well-specified tasks; Claude reviews and fixes; log both in `notes/AI_WORKFLOW_LOG.md`.
+- Next: M3 utility heatmaps.
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.
