@@ -3,7 +3,7 @@
 **Scouting reports for VALORANT coaches, built from every recorded event of 2,079 pro maps.**
 Built for the Cloud9 x JetBrains "Sky's The Limit" Hackathon 2026, Category 1 (Tactical Scouting, Utility Placement & Operator Profiler).
 
-Coaches spend hours scrubbing VODs to answer questions like *"Who holds the Op on their Haven defense, and where?"* or *"Where does their Killjoy put her nanoswarm?"*. OpScope answers them in seconds, and every answer shows its evidence: **"30 of 80 defense rounds"**, compared with the rest of the league.
+Coaches spend hours scrubbing VODs to answer questions like *"Who holds the Op on their Haven defense, and where?"* or *"Where does their Killjoy put her nanoswarm?"*. OpScope answers them in seconds, and every answer shows its evidence: **"30 of 80 defense rounds"**, compared with other teams in the same tier and season.
 
 <!-- Screenshots: add docs/screenshots/report.png, operator.png, utility.png (see notes/SUBMISSION_CHECKLIST.md) -->
 
@@ -16,13 +16,13 @@ Coaches spend hours scrubbing VODs to answer questions like *"Who holds the Op o
 | **Utility profiler** | Where traps, recon, smokes, stalls and flashes are cast, before or during the round. **Habit spots** are utility a player puts in the same place round after round. For mollies, nanoswarms and other damaging utility, it shows a **validated estimate of where it lands**. |
 | **How it works** | The method and its limits, in plain language, with live pipeline numbers. |
 
-Filters for team, opponent, map, side, patch and event apply everywhere. Map areas are named the way players say them ("near B Main", "C Site").
+Filters for team, opponent, map, side, patch and event apply everywhere. Each team is compared only with teams in its own **tier and season** (e.g. VCT 2025), and the report shows the team's latest roster in the data, marking tendencies of players who later left. Map areas are named the way players say them ("near B Main", "C Site").
 
 ### A few things it found
 
-- **Cloud9 (VCT Americas 2025)** ran an Operator in **30 of 80** Haven defense rounds but only **2 of 134** on Lotus, their most-played map (league: 16% on Lotus). OXY held it in 93 of their 96 Op rounds.
-- **NRG** brought an **Odin** in **47 of 117** Lotus defense rounds, against 6% across the league. It was usually s0m on Omen (41 of 47), and early in the round the gun was seen near **A Door** in 32 of the 45 rounds where its holder showed up.
-- Habits are compared with other players. neT's Viper wall goes up from the same spot in 70 of 71 rounds, but so does the typical Viper's (a standard lineup), so OpScope doesn't flag it. It does flag FNS's Killjoy nanoswarm near B Tree on Fracture: the same spot in 8 of 13 rounds, where a typical player is at 8%.
+- **Cloud9 (VCT Americas 2025)** ran an Operator in **30 of 80** Haven defense rounds but only **2 of 134** on Lotus, their most-played map (other VCT 2025 teams: 11% on Lotus). OXY held it in 93 of their 96 Op rounds.
+- **NRG** brought an **Odin** in **47 of 117** Lotus defense rounds, against 12% for other VCT 2025 teams. It was usually s0m on Omen (41 of 47), and early in the round the gun was seen near **A Door** in 32 of the 45 rounds where its holder showed up.
+- Habits are compared with other players. neT's Viper wall goes up from the same spot in 70 of 71 rounds, but so does the typical Viper's (a standard lineup), so OpScope doesn't flag it. It does flag neT's Killjoy turret near Mid Boiler on Icebox defense: the same spot in 25 of 26 rounds, where the typical VCT 2025 Killjoy is at 66%.
 
 ## Run it
 
@@ -41,7 +41,7 @@ uv run streamlit run app.py                # opens http://localhost:8501
 
 If you open the app before building the cache, it shows these steps instead of an error.
 
-**Tests:** `uv run pytest` (33 tests). They use synthetic GRID events; the page smoke test is skipped when no cache exists.
+**Tests:** `uv run pytest` (38 tests). They use synthetic GRID events; the page smoke test is skipped when no cache exists.
 
 In **PyCharm**, the shared run configurations in `.run/` (OpScope app, Build cache, Tests, Explore data) appear automatically.
 

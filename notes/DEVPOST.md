@@ -9,11 +9,11 @@ Scouting a VALORANT opponent means hours of VOD review to answer simple question
 
 ## What it does
 OpScope reads every recorded event from 2,079 pro maps (3.5M events) and builds:
-- **Scouting report:** pick an opponent and get a **game plan**. These are counters to their most unusual tendencies, written from your side ("Expect Odin spam near A Door when you attack Lotus: they bring an Odin in 47 of 117 defense rounds, league 6%"). Then ranked key tendencies, the map pool, and a per-map breakdown of plant sites and predictable utility. Pick Cloud9 and it becomes a **predictability check**: what opponents scouting Cloud9 would see.
+- **Scouting report:** pick an opponent and get a **game plan**. These are counters to their most unusual tendencies, written from your side ("Expect Odin spam near A Door when you attack Lotus: they bring an Odin in 47 of 117 defense rounds; other VCT 2025 teams: 12%"). Then ranked key tendencies, the map pool, and a per-map breakdown of plant sites and predictable utility. Pick Cloud9 and it becomes a **predictability check**: what opponents scouting Cloud9 would see.
 - **Operator profiler:** who buys the Op/Odin/Outlaw/Marshal, how often vs the league, where the holder sits by time in the round, kill sightlines, timing, pickups, and full-buy win rates.
 - **Utility profiler:** where traps, recon, smokes, stalls and flashes go, before or during the round. **Habit spots** a player reuses round after round, and **validated landing estimates** for damaging utility.
 
-Every number shows its sample ("30 of 80 rounds"). Tendencies appear only when the team's 95% range clears the league rate, and map areas are named the way players say them ("near B Main").
+Every number shows its sample ("30 of 80 rounds"). Teams are compared only with teams in the same tier and season, and tendencies appear only when the team's 95% range clears that rate. Players who later left the roster are flagged, and map areas are named the way players say them ("near B Main").
 
 ## How we built it
 - **Pipeline:** Python 3.14 streams the compressed GRID feeds (never decompressed to disk) into a parquet cache in about 4 minutes. The parser replays GRID's 13,255 rollback events, so every map matches its official score.
@@ -24,12 +24,13 @@ Every number shows its sample ("30 of 80 rounds"). Tendencies appear only when t
   - area names from community callouts, verified to share GRID's coordinates
   - a landing-spot model validated on held-out matches
 - **UI:** Streamlit + Plotly, with a minimap drawn from 1.4M recorded positions (no Riot art).
-- **Tests:** 33, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
+- **Tests:** 38, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
 - **Tools:** built in **PyCharm** with **Junie**, **JetBrains AI Assistant** and **Claude Code**. See "JetBrains tools" below and AI_SHOWCASE.md.
 
 ## Challenges we ran into
 - **Silent data errors:** 35 maps came out one round long until we found that GRID corrects itself with rollback events (undo newest-first, new IDs).
 - **Sparse positions:** positions only exist when a player shoots, gets hit or uses an ability, so every map view states how many rounds it covers.
+- **Fair comparisons:** VCT 2025 and Game Changers 2026 play different metas, and rosters change mid-season. Comparisons are now within tier and season, and tendencies of departed players are flagged.
 - **"True but useless" insights:** a Viper wall placed in the same spot in 70 of 71 rounds is standard play. Habits had to be compared with the league too.
 - **No landing data:** we built ground truth from who damaging utility hurt, and only ship estimates where that check exists.
 

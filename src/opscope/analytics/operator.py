@@ -17,7 +17,7 @@ from functools import cache
 import numpy as np
 import pandas as pd
 
-from opscope.load import Dataset, load
+from opscope.load import Dataset, cohort_label, load
 from opscope.maps import aggression
 
 TIME_BUCKETS = [(-1e9, 20, "0–20s"), (20, 40, "20–40s"), (40, 60, "40–60s"), (60, 1e9, "60s+")]
@@ -41,7 +41,8 @@ def team_rounds() -> pd.DataFrame:
     """One row per (played round, team) from that team's point of view."""
     r = load().rounds
     r = r[r["played"].fillna(False)]
-    common = ["series_id", "game_id", "round_num", "map", "patch", "event", "tier", "winner_team_id", "won_t", "plant_t"]
+    common = ["series_id", "game_id", "round_num", "map", "patch", "event", "tier", "season", "cohort", "started_at",
+              "winner_team_id", "won_t", "plant_t"]
     atk = r[common + ["atk_team_id", "def_team_id", "atk_loadout"]].set_axis(common + ["team_id", "opp_id", "loadout"], axis=1)
     atk["side"] = "attacker"
     dfn = r[common + ["def_team_id", "atk_team_id", "def_loadout"]].set_axis(common + ["team_id", "opp_id", "loadout"], axis=1)
@@ -76,11 +77,23 @@ class Scope:
     patches: tuple[str, ...] = ()
     events: tuple[str, ...] = ()
     players: tuple[str, ...] = ()
+    cohorts: tuple[str, ...] = ()  # tier-season, e.g. ("vct-2025",); set for league comparisons
 
     def league(self) -> "Scope":
-        """Same map/side/patch/event context, but every team."""
+        """Same map/side/patch/event/cohort context, but every team."""
         return Scope(team_id="", weapon=self.weapon, side=self.side, maps=self.maps,
-                     patches=self.patches, events=self.events)
+                     patches=self.patches, events=self.events, cohorts=self.cohorts)
+
+
+def league_scope(s: Scope, team_rows: pd.DataFrame, **overrides) -> Scope:
+    """The league to compare a team with: every *other* team in the same tier and season as the team's rounds.
+
+    VCT 2025 and Game Changers 2025/2026 play on different patches and at different levels, so mixing them
+    would compare a team with a meta it never played in.
+    """
+    cohorts = tuple(sorted(team_rows["cohort"].dropna().unique()))
+    base = s.league()
+    return Scope(**{**base.__dict__, "cohorts": cohorts, **overrides})
 
 
 def _filter_rounds(tr: pd.DataFrame, s: Scope) -> pd.DataFrame:
@@ -97,6 +110,8 @@ def _filter_rounds(tr: pd.DataFrame, s: Scope) -> pd.DataFrame:
         m &= tr["patch"].isin(s.patches)
     if s.events:
         m &= tr["event"].isin(s.events)
+    if s.cohorts:
+        m &= tr["cohort"].isin(s.cohorts)
     return tr[m]
 
 
@@ -112,6 +127,7 @@ class OperatorReport:
     pickups: pd.DataFrame           # rounds where a non-owner fired the gun
     league_share: tuple[int, int] = (0, 0)
     league_aggression: np.ndarray = field(default_factory=lambda: np.array([]))
+    league_label: str = "league"     # e.g. "VCT 2025": who the team is compared with
 
     # ---- headline numbers -----------------------------------------------------------------
     @property
@@ -226,7 +242,9 @@ def operator_report(s: Scope) -> OperatorReport:
     sight = e[e["kind"] == "kill"].dropna(subset=["ax", "ay", "tx", "ty"])
 
     # League context: share of team-rounds with the gun, and setup aggression, same map/side/patch.
-    lg_tr = _filter_rounds(tr_all, s.league())
+    lg = league_scope(s, tr)
+    lg_tr = _filter_rounds(tr_all, lg)
+    lg_tr = lg_tr[lg_tr["team_id"] != s.team_id]  # the league is everyone else
     lg_h = _holders(d, lg_tr, s.weapon)
     lg_share = (len(set(zip(lg_h["game_id"], lg_h["round_num"], lg_h["team_id"]))), len(lg_tr))
     lg_setups = _setups(_holder_positions(lg_h[lg_h["team_id"] != s.team_id])) if s.maps else pd.DataFrame()
@@ -234,4 +252,5 @@ def operator_report(s: Scope) -> OperatorReport:
 
     pos = _holder_positions(h)
     return OperatorReport(scope=s, rounds=tr, holders=h, positions=pos, setups=_setups(pos), sightlines=sight,
-                          shots=e, pickups=pickups, league_share=lg_share, league_aggression=lg_aggr)
+                          shots=e, pickups=pickups, league_share=lg_share, league_aggression=lg_aggr,
+                          league_label=cohort_label(lg.cohorts))

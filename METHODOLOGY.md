@@ -33,7 +33,7 @@ How OpScope turns raw match events into scouting, what each number means, how it
 
 Every claim carries its sample: **"k of n rounds"**.
 
-- **League:** the same rate for every other team on the same map and side, with the same patch and event filters.
+- **League (comparison group):** the same rate for every *other* team in the **same tier and season** (VCT 2025, Game Changers 2025, or Game Changers 2026), on the same map and side, with the same patch and event filters. Tiers and seasons are kept apart because they play on different patches and at different levels: the defense Op rate on Lotus is 10% in VCT 2025 but 17% in Game Changers. An early version compared everyone with everyone, which overstated VCT teams' differences (e.g. Cloud9's Lotus Op rate against "16%" instead of the fair 11%).
 - **95% range:** a Wilson score interval.
 - **Too few to call:** percentages are hidden below 8 rounds.
 - **When something is a tendency:** only when the team's 95% range does not overlap the league rate. The **surprise** score is the gap between them (0 if they overlap), so findings that are both unusual and well sampled rank first:
@@ -58,15 +58,23 @@ Every claim carries its sample: **"k of n rounds"**.
 - **Cast spot:** where the player stood when casting, from the supplement. For gap-flagged casts (usually the caster died right after), the closer movement sample is used.
 - **Ability types:** every ability in the data is classed as trap, recon, smoke, stall, flash, damage, movement, heal or other.
 - **Habit spots:** clustering of one player's casts of one ability on one map and side, where casts within **4 m** count as the same spot. Habits are counted in **rounds**, not casts, out of **rounds the player was on that agent**, so a rarely played agent can't look like a strong habit.
-- **League baseline for habits:** the first version ranked "neT's Viper wall goes up in the same spot 70 of 71 rounds" at the top of every report. It's true but useless: across 92 players, the typical Viper places that wall in the same spot in 100% of rounds, because it's a standard lineup. Now every habit is compared with the **median same-spot share of all players with that ability on that map and side**, and is only listed when the player is reliably more predictable than that (same Wilson-gap rule).
+- **League baseline for habits:** the first version ranked "neT's Viper wall goes up in the same spot 70 of 71 rounds" at the top of every report. It's true but useless: across the 22 VCT 2025 Vipers with enough rounds, the typical one places that wall in the same spot in 100% of rounds, because it's a standard lineup. Now every habit is compared with the **median same-spot share of all players in the same tier and season with that ability on that map and side**, and is only listed when the player is reliably more predictable than that (same Wilson-gap rule).
 
-## 5. Bomb sites and named areas
+## 5. Rosters
+
+Rosters change during a season, so team tendencies can mix lineups. For each event, a team's roster is the players who played at least 20% of its rounds there (a one-map substitute doesn't count), and the **latest roster** is the one from the team's most recent event in the data. For example, NRG used three lineups across VCT Americas 2025 (FNS and Verno left during the year; brawk and skuba joined).
+
+- Tendencies about players who aren't on the latest roster stay visible but are **marked** (e.g. "not on the roster after Stage 1 2025") and are **left out of the game plan**.
+- The report states the roster and its date ("as of their last match in the data"). The data can't know about changes after that.
+- Team-wide rates (Op usage, plant sites) still combine every lineup in the selected events; the report says when there's more than one, and the Event filter narrows it.
+
+## 6. Bomb sites and named areas
 
 - **Bomb sites:** k-means clustering of **28,952** planter positions finds 2 sites per map (3 on Haven and Lotus), each 3–7 m across.
 - **Site names:** the data can't tell A from B. The community API at valorant-api.com lists every map's callouts with coordinates. Testing all 8 axis flips and swaps showed it uses **the same coordinate system as GRID**, unchanged, on all 13 maps. Each plant cluster sits 2–19 m from its "Site" callout, and the next site is 42–122 m away, so the match is unambiguous. As a sanity check, Haven's and Lotus's middle site comes out as B.
 - **Area names:** any position is named after the nearest of 346 callout points within 25 m. Within 8 m of a site centre it's named after the site, because a callout is a single point and a large site's centre can be closer to a neighbouring callout. A test that compares the two sources caught exactly that ("B Boat House" for Ascent's B site). **The letter (A/B/C/Mid) is reliable; the exact area is a best guess near borders.**
 
-## 6. Estimated landing spots (validated)
+## 7. Estimated landing spots (validated)
 
 GRID doesn't record where utility lands. **Damaging** utility leaves evidence, though: the players it hurts were standing in the area.
 
@@ -87,16 +95,16 @@ GRID doesn't record where utility lands. **Damaging** utility leaves evidence, t
    - **Non-damaging utility** (smokes, alarmbots, cameras) has no damage to check against, so it stays at the cast spot with an aim arrow.
    - **Turrets** do deal damage, but at range: their victims stand a median 23 m from where the turret was placed, and the damage event's actor is Killjoy, not the turret. Their damage can't locate the turret, and since a turret is placed next to Killjoy, its cast spot is already a good position.
 
-## 7. Game plan and predictability check
+## 8. Game plan and predictability check
 
-Each ranked tendency becomes one short, rule-based suggestion that cites its evidence, at most one per map, side and category:
+Each ranked tendency (about players still on the roster) becomes one short, rule-based suggestion that cites its evidence, at most one per map, side and category:
 
-- **Opponent mode** is written from your side: their defense is your attack. For example, "Expect Odin spam near A Door when you attack Lotus. They bring an Odin in 47 of 117 defense rounds…"
+- **Opponent mode** is written from your side: their defense is your attack. For example, "Expect Odin spam near A Door when you attack Lotus. They bring an Odin in 47 of 117 defense rounds (other VCT 2025 teams: 12%)…"
 - **Self-scout mode** (Cloud9's own teams) turns the same tendencies into what an opponent would see.
 
 The rules are simple and readable by design. They're prompts for prep, not orders.
 
-## 8. Limits
+## 9. Limits
 
 - Positions exist only at events, so quiet players and quiet rounds leave gaps. Every map view states how many rounds it covers.
 - Landing spots are estimates, and only for damaging utility. Area names are a best guess near borders.

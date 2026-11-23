@@ -13,7 +13,7 @@ from opscope.zones import SITE_RADIUS_CM
 st.title("How it works")
 st.markdown("OpScope reads every recorded event of professional VALORANT matches and turns them into "
             "scouting a coach can check: **every number shows the rounds behind it**, and every tendency is "
-            "compared with the rest of the league.")
+            "compared with other teams in the same tier and season.")
 
 report_path = cache_dir() / "ingest_report.json"
 rep = json.loads(report_path.read_text()) if report_path.exists() else {}
@@ -34,7 +34,8 @@ if rows:
 st.header("Reading a card")
 st.markdown(f"""
 - **"48 of 64 rounds"** is the evidence: how often it happened and out of how many chances.
-- **League** is the same number for every other team on the same map and side.
+- **League** ("other VCT 2025 teams", etc.) is the same number for every other team in the **same tier and season** on the same map and side. Tiers and seasons play different metas, so they aren't mixed.
+- **Rosters:** each team's latest roster in the data is shown on the report. Tendencies about players who later left are marked and left out of the game plan.
 - **95% range** is how far the true rate could plausibly be from what we saw, given the sample (a Wilson interval).
   Small samples give wide ranges.
 - A **tendency** is only listed when that range does not overlap the league rate, and it needs at least

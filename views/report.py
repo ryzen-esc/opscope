@@ -5,9 +5,10 @@ import streamlit as st
 
 from opscope.analytics.antistrat import game_plan
 from opscope.analytics.insights import map_pool, plant_sites, team_insights
-from opscope.analytics.operator import Scope, _filter_rounds, team_rounds
+from opscope.analytics.operator import Scope, _filter_rounds, league_scope, team_rounds
+from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
-from opscope.load import CLOUD9_TEAMS
+from opscope.load import CLOUD9_TEAMS, cohort_label
 from opscope.ui.cards import insight_card, stat_card, suggestion_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_spots, base_map
@@ -27,8 +28,19 @@ team = team_name(tid)
 scope = Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"], patches=f["patches"], events=f["events"])
 who = "Self-scout" if tid in CLOUD9_TEAMS else "Scouting report"
 st.title(f"{who}: {team}")
-st.caption("Tendencies that stand out from the rest of the league, with the sample behind each one. "
-           "Covers both sides; the Side filter applies to the profiler pages.")
+roster = latest_roster(tid)
+if roster:
+    scope_events = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"],
+                                                       patches=f["patches"], events=f["events"]))["event"].unique()
+    n_lineups = lineups_in(tid, scope_events)
+    note = (f" This data covers **{n_lineups} different lineups**; team-wide rates mix them. Filter by Event "
+            f"to focus on one. Tendencies about players who later left are marked and kept out of the game plan."
+            if n_lineups > 1 else "")
+    st.markdown(f"**Roster as of their last match in the data** ({short_event(roster.event)}, {roster.last_match}): "
+                f"{', '.join(roster.names)}.{note}")
+_cohorts = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None))["cohort"].dropna().unique()
+st.caption(f"Tendencies that stand out from other {cohort_label(_cohorts)} teams (same tier and season), with the "
+           f"sample behind each one. Covers both sides; the Side filter applies to the profiler pages.")
 
 pool = map_pool(scope)
 if pool.empty:
@@ -101,7 +113,9 @@ left, right = st.columns([3, 2], gap="large")
 
 tr = _filter_rounds(team_rounds(), Scope(team_id=tid, side="attacker", maps=(map_name,), opponents=f["opponents"],
                                          patches=f["patches"], events=f["events"]))
-lg = _filter_rounds(team_rounds(), Scope(team_id="", side="attacker", maps=(map_name,), patches=f["patches"], events=f["events"]))
+lg_s = league_scope(Scope(team_id=tid, side="attacker", maps=(map_name,), patches=f["patches"], events=f["events"]), tr)
+lg = _filter_rounds(team_rounds(), lg_s)
+lg_name = f"Other {cohort_label(lg_s.cohorts)} teams"
 plants = plant_sites()
 keys = ["game_id", "round_num"]
 team_pl = tr.merge(plants[keys + ["site"]], on=keys)
@@ -138,7 +152,7 @@ with right:
         sp = pd.DataFrame(rows)
         figp = go.Figure()
         figp.add_bar(y=sp["Site"], x=sp["Team"], orientation="h", name=team, marker_color="#00AEEF", text=sp["label"])
-        figp.add_bar(y=sp["Site"], x=sp["League"], orientation="h", name="League", marker_color="#4a5d73")
+        figp.add_bar(y=sp["Site"], x=sp["League"], orientation="h", name=lg_name, marker_color="#4a5d73")
         figp.update_layout(height=60 + 60 * len(sp), barmode="group", margin=dict(l=0, r=0, t=0, b=0),
                            xaxis_tickformat=".0%", legend=dict(orientation="h", y=-0.25),
                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")

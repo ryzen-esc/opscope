@@ -18,6 +18,7 @@ def stat_card(title: str, value: str, sample: str, context: str | None = None, t
 
 
 def rate_card(title: str, k: int, n: int, unit: str = "rounds", league: tuple[int, int] | None = None,
+              league_label: str = "league",
               higher_is: str = "neutral") -> None:
     """Percentage card that refuses to make a claim on tiny samples."""
     if n < MIN_SAMPLE:
@@ -27,7 +28,7 @@ def rate_card(title: str, k: int, n: int, unit: str = "rounds", league: tuple[in
     context, tone = None, "accent"
     if league and league[1]:
         lp = pct(*league)
-        context = f"league {lp:.0%} · 95% range {lo:.0%}–{hi:.0%}"
+        context = f"{league_label} {lp:.0%} · 95% range {lo:.0%}–{hi:.0%}"
         if higher_is != "neutral" and not (lo <= lp <= hi):
             above = pct(k, n) > lp
             tone = "good" if above == (higher_is == "good") else "bad"
@@ -61,12 +62,14 @@ def insight_card(ins) -> None:
     """A ranked scouting insight: category chip, map/side, sentence, sample and league context."""
     color = CATEGORY_COLORS.get(ins.category, "#8b9bab")
     side = {"attacker": "attack", "defender": "defense"}.get(ins.side, ins.side)
-    league = f" · league {ins.league_rate:.0%}" if ins.league_rate is not None else ""
+    league = f" · others {ins.league_rate:.0%}" if ins.league_rate is not None else ""
+    former = (f'<div class="ops-ctx" style="color:#F5B700">⚠ Former player: {ins.departed}</div>'
+              if getattr(ins, "departed", None) else "")
     st.markdown(
         f'<div class="ops-card" style="border-left:4px solid {color}">'
         f'<div class="ops-title"><span style="color:{color}">{ins.category}</span> · {ins.map.title()} · {side}</div>'
         f'<div style="color:#dce6ef;margin:6px 0 4px 0;line-height:1.4">{ins.text}</div>'
-        f'<div class="ops-ctx">{ins.sample}{league}</div></div>',
+        f'<div class="ops-ctx">{ins.sample}{league}</div>{former}</div>',
         unsafe_allow_html=True,
     )
 

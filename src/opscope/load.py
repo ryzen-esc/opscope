@@ -14,6 +14,18 @@ from opscope.ingest.build import cache_dir
 from opscope.taxonomy import WEAPON_GROUP, util_class
 
 CLOUD9_TEAMS = {"79": "Cloud9 (VCT 2025)", "3429": "Cloud9 GC (2026)"}
+TIER_NAMES = {"vct": "VCT", "gc": "Game Changers"}
+
+
+def cohort_label(cohorts) -> str:
+    """('vct-2025',) -> 'VCT 2025'; ('gc-2025', 'gc-2026') -> 'Game Changers 2025–2026'."""
+    cohorts = sorted(set(cohorts))
+    if not cohorts:
+        return "league"
+    tiers = sorted({c.split("-")[0] for c in cohorts})
+    years = sorted({c.split("-")[1] for c in cohorts})
+    tier = " + ".join(TIER_NAMES.get(t, t) for t in tiers)
+    return f"{tier} {years[0]}" + (f"–{years[-1]}" if len(years) > 1 else "")
 
 
 @dataclass(frozen=True)
@@ -38,8 +50,12 @@ def _read(table: str) -> pd.DataFrame:
 @cache
 def load() -> Dataset:
     games = _read("games")
+    # A cohort is tier + season (e.g. "vct-2025"): teams are only compared with teams in the same cohort,
+    # because tiers and years play on different patches and metas.
+    games["season"] = games["started_at"].str[:4].astype("string")
+    games["cohort"] = (games["tier"] + "-" + games["season"]).astype("string")
     keep = set(games["game_id"])
-    game_cols = games[["game_id", "map", "patch", "tier", "event"]]
+    game_cols = games[["game_id", "map", "patch", "tier", "event", "season", "cohort", "started_at"]]
 
     def scoped(table: str) -> pd.DataFrame:
         df = _read(table)

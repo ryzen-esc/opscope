@@ -16,11 +16,12 @@ from functools import cache
 import numpy as np
 import pandas as pd
 
-from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, positions, team_rounds
+from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, league_scope, positions, team_rounds
 from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
 from opscope.analytics.utility import UtilityScope, utility_report
 from opscope.ingest.build import cache_dir
-from opscope.load import load
+from opscope.analytics.roster import last_event_with, latest_roster, short_event
+from opscope.load import cohort_label, load
 from opscope.zones import assign_site, nearest_callout, plant_positions
 
 SIDE_WORD = {"attacker": "attack", "defender": "defense"}
@@ -39,7 +40,8 @@ class Insight:
     league: tuple[int, int] | None = None
     score: float = 0.0
     tags: dict = field(default_factory=dict)
-
+    departed: str | None = None  # set when the insight's player isn't on the team's latest roster
+    peers: str = "other teams"   # who the league rate comes from, e.g. "other VCT 2025 teams"
     @property
     def sample(self) -> str:
         return of(self.k, self.n, self.unit)
@@ -89,9 +91,11 @@ def gun_insights(s: Scope) -> list[Insight]:
     """Big-gun usage per map/side vs the league, and who carries it."""
     d = load()
     tr_all = team_rounds()
-    league = _filter_rounds(tr_all, Scope(team_id="", side=None, maps=s.maps, patches=s.patches, events=s.events))
     team = _filter_rounds(tr_all, Scope(team_id=s.team_id, side=None, maps=s.maps, opponents=s.opponents,
                                         patches=s.patches, events=s.events))
+    lg_s = league_scope(s, team, side=None)
+    league = _filter_rounds(tr_all, lg_s)
+    who_lg = cohort_label(lg_s.cohorts)
     out = []
     for weapon, label in GUNS.items():
         lo = d.loadouts.loc[d.loadouts["primary_fe"] == weapon,
@@ -120,10 +124,10 @@ def gun_insights(s: Scope) -> list[Insight]:
                                 on=["game_id", "round_num", "team_id"]))
             who, tags = "", {"weapon": weapon, "label": label, "direction": "more" if more else "less"}
             if more and len(holders):
-                top = holders.groupby(["player_name", "agent"]).size().sort_values(ascending=False)
-                (pname, agent), cnt = top.index[0], int(top.iloc[0])
+                top = holders.groupby(["player_id", "player_name", "agent"]).size().sort_values(ascending=False)
+                (pid, pname, agent), cnt = top.index[0], int(top.iloc[0])
                 who = f" Usually <b>{pname}</b> on {agent.title()} ({cnt} of {k})."
-                tags.update(player=pname, agent=agent)
+                tags.update(player=pname, player_id=str(pid), agent=agent)
                 area, ak, an = early_area(holders, m)
                 if area:
                     who += f" Early in the round it's most often seen near <b>{area}</b> ({of(ak, an, 'rounds seen')})."
@@ -132,8 +136,9 @@ def gun_insights(s: Scope) -> list[Insight]:
             out.append(Insight(
                 category="Operator", map=m, side=side,
                 text=f"{verb.capitalize()} buy the <b>{label}</b> on {SIDE_WORD[side]} on <b>{m.title()}</b>: "
-                     f"<b>{of(k, n, SIDE_WORD[side] + ' rounds')}</b> (league {lr:.0%}).{who}",
+                     f"<b>{of(k, n, SIDE_WORD[side] + ' rounds')}</b> ({who_lg} teams: {lr:.0%}).{who}",
                 k=k, n=n, unit=f"{SIDE_WORD[side]} rounds", league=(lk, ln), score=sc + (0.05 if more else 0),
+                peers=f"other {who_lg} teams",
                 tags=tags))
     return out
 
@@ -143,7 +148,9 @@ def plant_insights(s: Scope) -> list[Insight]:
     tr_all = team_rounds()
     rounds_scope = _filter_rounds(tr_all, Scope(team_id=s.team_id, side="attacker", maps=s.maps,
                                                 opponents=s.opponents, patches=s.patches, events=s.events))
-    lg_scope = _filter_rounds(tr_all, Scope(team_id="", side="attacker", maps=s.maps, patches=s.patches, events=s.events))
+    lg_s = league_scope(s, rounds_scope, side="attacker")
+    lg_scope = _filter_rounds(tr_all, lg_s)
+    who_lg = cohort_label(lg_s.cohorts)
     plants = plant_sites()
     keys = ["game_id", "round_num"]
     team = rounds_scope.merge(plants[keys + ["site"]], on=keys)
@@ -166,14 +173,14 @@ def plant_insights(s: Scope) -> list[Insight]:
             out.append(Insight(
                 category="Attack", map=m, side="attacker",
                 text=f"On <b>{m.title()}</b> attack they plant <b>{site}</b> in <b>{of(int(k), n, 'planted rounds')}</b> "
-                     f"(league {lr:.0%}).",
-                k=int(k), n=n, unit="planted rounds", league=(lk, ln), score=sc,
+                     f"({who_lg} teams: {lr:.0%}).",
+                k=int(k), n=n, unit="planted rounds", league=(lk, ln), score=sc, peers=f"other {who_lg} teams",
                 tags={"site": site, "direction": "more" if more else "less"}))
     return out
 
 
 @cache
-def league_habit_rates(map_name: str, side: str) -> dict[str, tuple[float, int]]:
+def league_habit_rates(map_name: str, side: str, cohorts: tuple[str, ...] = ()) -> dict[str, tuple[float, int]]:
     """For each ability on a map/side: the median 'same-spot share' across all players in the league.
 
     Some utility is *always* placed the same way (e.g. a Viper wall lineup), so a 70-of-71 habit is only
@@ -184,20 +191,24 @@ def league_habit_rates(map_name: str, side: str) -> dict[str, tuple[float, int]]
     reused; `python -m opscope.analytics.insights --warm` precomputes every map and side.
     """
     from opscope.analytics.utility import SPOT_RADIUS_CM
-    path = cache_dir() / "baselines" / f"habits_{map_name}_{side}_r{SPOT_RADIUS_CM}_n{MIN_SAMPLE}.json"
+    tag = "+".join(sorted(cohorts)) or "all"
+    path = cache_dir() / "baselines" / f"habits_{map_name}_{side}_{tag}_r{SPOT_RADIUS_CM}_n{MIN_SAMPLE}.json"
     if path.exists():
         return {a: (v[0], v[1]) for a, v in json.loads(path.read_text()).items()}
-    rates = _compute_habit_rates(map_name, side)
+    rates = _compute_habit_rates(map_name, side, cohorts)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(rates))
     return rates
 
 
-def _compute_habit_rates(map_name: str, side: str) -> dict[str, tuple[float, int]]:
+def _compute_habit_rates(map_name: str, side: str, cohorts: tuple[str, ...] = ()) -> dict[str, tuple[float, int]]:
     from opscope.analytics.utility import repeat_spots
     d = load()
     tr = team_rounds()
-    rounds = tr[(tr["map"] == map_name) & (tr["side"] == side)][["game_id", "round_num", "team_id"]]
+    sel = (tr["map"] == map_name) & (tr["side"] == side)
+    if cohorts:
+        sel &= tr["cohort"].isin(cohorts)
+    rounds = tr[sel][["game_id", "round_num", "team_id"]]
     c = d.casts[(d.casts["map"] == map_name) & (d.casts["side"] == side) & d.casts["phase"].isin(["buy", "live"])]
     c = c.merge(rounds, on=["game_id", "round_num", "team_id"])
     lo = d.loadouts.merge(rounds, on=["game_id", "round_num", "team_id"])
@@ -219,12 +230,14 @@ def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
         rep = utility_report(UtilityScope(team_id=s.team_id, side=side, maps=s.maps, opponents=s.opponents,
                                           patches=s.patches, events=s.events,
                                           classes=("trap", "recon", "smoke", "flash", "stall")))
+        cohorts = tuple(sorted(rep.rounds["cohort"].dropna().unique()))
+        who_lg = cohort_label(cohorts)
         for m in rep.casts["map"].dropna().unique():
             h = rep.habits(m, max_per_ability=1)
             if h.empty:
                 continue
             h = h[(h["rounds_on_agent"] >= MIN_SAMPLE) & (h["share"] >= min_share)]
-            baseline = league_habit_rates(m, side) if not h.empty else {}
+            baseline = league_habit_rates(m, side, cohorts) if not h.empty else {}
             for _, row in h.iterrows():
                 k, n = int(row["rounds"]), int(row["rounds_on_agent"])
                 lg_share, lg_players = baseline.get(row["ability"], (None, 0))
@@ -239,16 +252,30 @@ def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
                     category="Utility", map=m, side=side,
                     text=f"<b>{row['player_name']}</b> ({row['agent'].title()}) puts <b>{pretty(row['ability'])}</b> "
                          f"in the same spot{where} on {SIDE_WORD[side]} on <b>{m.title()}</b>: <b>{of(k, n, 'rounds on ' + row['agent'].title())}</b> "
-                         f"(typical player: {lg_share:.0%} in their usual spot).",
+                         f"(typical {who_lg} player: {lg_share:.0%} in their usual spot).",
                     k=k, n=n, unit=f"rounds on {row['agent'].title()}", score=sc,
-                    tags={"player": row["player_name"], "ability": row["ability"], "x": row["x"], "y": row["y"],
+                    tags={"player": row["player_name"], "player_id": str(row["player_id"]),
+                          "ability": row["ability"], "x": row["x"], "y": row["y"],
                           "util_class": row["util_class"], "area": area if isinstance(area, str) else None}))
     return out
+
+
+def mark_departed(items: list[Insight], team_id: str) -> None:
+    """Flag insights about players who aren't on the team's latest roster in the data (kept, not hidden)."""
+    latest = latest_roster(team_id)
+    if latest is None:
+        return
+    for ins in items:
+        pid = ins.tags.get("player_id")
+        if pid and pid not in latest.player_ids:
+            last = last_event_with(team_id, pid)
+            ins.departed = f"not on the roster after {short_event(last)}" if last else "not on the latest roster"
 
 
 def team_insights(s: Scope, limit: int | None = None) -> list[Insight]:
     """All insights for a team, best first."""
     items = gun_insights(s) + plant_insights(s) + habit_insights(s)
+    mark_departed(items, s.team_id)
     items.sort(key=lambda i: i.score, reverse=True)
     return items[:limit] if limit else items
 
@@ -274,10 +301,12 @@ def warm() -> None:
     """Precompute the league habit baselines for every map and side (about a minute; saved to cache/)."""
     import time
     started = time.time()
-    maps = sorted(load().games["map"].dropna().unique())
-    for m in maps:
-        for side in ("defender", "attacker"):
-            league_habit_rates(m, side)
+    g = load().games
+    maps = sorted(g["map"].dropna().unique())
+    for cohort in sorted(g["cohort"].dropna().unique()):
+        for m in sorted(g.loc[g["cohort"] == cohort, "map"].dropna().unique()):
+            for side in ("defender", "attacker"):
+                league_habit_rates(m, side, (cohort,))
     from opscope.analytics.landing import landing_model
     landing_model()
     print(f"Baselines ready for {len(maps)} maps in {time.time() - started:.0f}s")

@@ -30,7 +30,7 @@ def test_odin_advice_depends_on_side():
 
 def test_rarely_buys_the_gun_means_long_angles_are_safer():
     s = counter(ins("Operator", side="defender", weapon="operator", label="Operator", direction="less"))
-    assert "Long angles" in s.headline and "12 of 20 rounds" in s.detail and "league 20%" in s.detail
+    assert "Long angles" in s.headline and "12 of 20 rounds" in s.detail and "other teams: 20%" in s.detail
 
 
 def test_utility_counters_by_class():
@@ -59,3 +59,17 @@ def test_game_plan_keeps_order_and_one_per_map_side_category():
 def test_self_scout_turns_tendencies_into_warnings():
     w = warning(ins("Utility", side="attacker", util_class="trap", player="Xeppaa", ability="shear", area="A Main"))
     assert "predictable" in w.headline and "Xeppaa" in w.headline and "12 of 20" in w.detail
+
+
+def test_game_plan_skips_former_players_unless_asked():
+    gone = ins("Utility", util_class="trap", player="FNS", ability="nanoswarm", score=0.9)
+    gone.departed = "not on the roster after Stage 1 2025"
+    here = ins("Utility", util_class="trap", player="Ethan", ability="trapwire", map_name="haven", score=0.5)
+    assert [s.evidence.tags["player"] for s in game_plan([gone, here], self_scout=False)] == ["Ethan"]
+    assert len(game_plan([gone, here], self_scout=False, include_departed=True)) == 2
+
+
+def test_suggestions_name_the_comparison_group():
+    i = ins("Attack", side="attacker", site="B site")
+    i.peers = "other VCT 2025 teams"
+    assert "other VCT 2025 teams: 20%" in counter(i).detail

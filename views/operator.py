@@ -62,7 +62,8 @@ else:
 # ---- stat cards ----------------------------------------------------------------------------
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    rate_card(f"Rounds with {gun}", r.n_gun_rounds, r.n_rounds, unit, league=r.league_share)
+    rate_card(f"Rounds with {gun}", r.n_gun_rounds, r.n_rounds, unit, league=r.league_share,
+              league_label=f"{r.league_label} teams")
 with c2:
     w = r.win_rates("full")
     rate_card(f"Full-buy win rate with {gun}", *w["with"], "full buys")
@@ -148,8 +149,9 @@ mt = maps.assign(label=lambda x: x["map"].str.title(),
 figm = px.bar(mt, x="label", y="share", text="text", color_discrete_sequence=["#00AEEF"])
 league_rate = pct(*r.league_share)
 figm.add_hline(y=league_rate, line_dash="dot", line_color="#8b9bab",
-               annotation_text=f"league {league_rate:.0%}", annotation_font_color="#8b9bab")
+               annotation_text=f"{r.league_label} teams {league_rate:.0%}", annotation_font_color="#8b9bab")
 figm.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), yaxis_tickformat=".0%", yaxis_title=f"{unit} with {gun}",
                    xaxis_title=None, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(figm, width="stretch", config={"displayModeBar": False})
-st.caption("Bar labels show rounds with the gun / rounds played. League line uses the same side, patch and event filters.")
+st.caption(f"Bar labels show rounds with the gun / rounds played. The dotted line is every other {r.league_label} team "
+           f"(same tier and season), with the same side, patch and event filters.")

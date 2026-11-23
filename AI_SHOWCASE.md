@@ -27,7 +27,7 @@ In PyCharm, Junie (Code mode) wrote the synthetic GRID fixtures and 5 tests for 
 A first try in AI Assistant's *Chat* mode also taught a lesson: Chat mode can't touch files, so file-changing work belongs in Junie.
 
 ### 4. "True" isn't the same as "useful"
-The first scouting report ranked "neT's Viper wall goes up in the same spot in 70 of 71 rounds" above everything else. It's true, but every Viper does that: it's a standard lineup, and across 92 players the typical Viper places it in the same spot 100% of the time. The fix was a league baseline for **habits**, not just rates. Now a habit only shows up when a player is more predictable than others with the same ability on the same map. The top NRG finding became something a coach can actually use: *Odin on Lotus defense in 47 of 117 rounds, against 6% league-wide.*
+The first scouting report ranked "neT's Viper wall goes up in the same spot in 70 of 71 rounds" above everything else. It's true, but every Viper does that: it's a standard lineup, and the typical Viper places it in the same spot 100% of the time. The fix was a league baseline for **habits**, not just rates. Now a habit only shows up when a player is more predictable than others with the same ability on the same map. The top NRG finding became something a coach can actually use: *Odin on Lotus defense in 47 of 117 rounds, against 12% for other VCT 2025 teams.*
 
 ### 5. A human idea, checked by a machine
 The data can't tell bomb site A from B. I suggested looking it up online. Claude Code found that the community API valorant-api.com lists map callouts with coordinates, then **tested** whether those coordinates match GRID's: all 8 axis flips and swaps, on all 13 maps. The plain, unchanged coordinates won everywhere, and each site matched within 20 m, with the next site 40+ m away. Only then was it used, for both site names and area names like "near B Main". A later test that compared the two sources caught a subtle labelling error ("B Boat House" for a site centre), which was fixed before it reached the UI.
@@ -35,7 +35,14 @@ The data can't tell bomb site A from B. I suggested looking it up online. Claude
 ### 6. Validate estimates or don't ship them
 GRID doesn't record where utility lands. Claude Code built ground truth from players damaged by mollies and nanoswarms (23,405 casts) and found that utility lands 17–24 m along the aim, so the cast spots shown until then were ~20 m from the landings. A simple per-ability model cut the typical miss **from 21.3 m to 6.9 m on 171 held-out matches**. Estimates only appear for the 12 abilities where that check exists.
 
-### 7. The human catches the AI
+### 7. Asking "is the data fair?"
+I asked whether the patch and roster differences in the data mattered. Checking showed two real problems:
+- **Mixed tiers:** the "league" mixed VCT 2025 with mostly Game Changers 2026, which plays a different meta. The Lotus Op rate is 10% in VCT but 17% in Game Changers, so Cloud9's difference had been overstated.
+- **Mixed rosters:** team tendencies blended rosters. NRG's game plan cited FNS, who had left before Stage 2.
+
+Before changing anything, we confirmed both fixes stay within the provided data. Now each team is compared only with its own tier and season, and tendencies of players who later left are marked and kept out of the game plan.
+
+### 8. The human catches the AI
 Claude Code told me turrets deal no damage. I knew that was wrong and checked a search to be sure. The data agreed with me: 1,890 turret damage events. Turrets still had to be excluded, but for a better reason, which is now documented: a turret's victims stand ~23 m from the turret, so they can't locate it. Writing the in-app methodology page caught two more overclaims the same way ("±1 m precision" was never measured, and "replayed maps" were really "cancelled map starts").
 
 ## Keeping licensed data safe with AI tools

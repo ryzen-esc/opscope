@@ -49,22 +49,22 @@ def counter(ins: Insight) -> Suggestion | None:
             who = f" ({t['player']})" if t.get("player") else ""
             return Suggestion(
                 f"Respect the {gun}{who}{_near(t)} when you {you} {m}",
-                f"It's bought in {ins.sample} (league {ins.league_rate:.0%}). Don't dry-peek that angle: "
+                f"It's bought in {ins.sample} ({ins.peers}: {ins.league_rate:.0%}). Don't dry-peek that angle: "
                 f"flash or smoke it before taking space, or hit away from it.", ins)
         if ins.side == "defender":
             return Suggestion(
                 f"Long angles are cheaper when you attack {m}",
-                f"Their defense rarely has a {gun} ({ins.sample}, league {ins.league_rate:.0%}), "
+                f"Their defense rarely has a {gun} ({ins.sample}, {ins.peers}: {ins.league_rate:.0%}), "
                 f"so rifles can take long duels with less risk.", ins)
         return Suggestion(
             f"Hold long angles with confidence when you defend {m}",
-            f"They rarely bring a {gun} on attack ({ins.sample}, league {ins.league_rate:.0%}).", ins)
+            f"They rarely bring a {gun} on attack ({ins.sample}, {ins.peers}: {ins.league_rate:.0%}).", ins)
 
     if ins.category == "Attack":
         site = t.get("site", "that site")
         return Suggestion(
             f"Lean toward <b>{site}</b> when you defend {m}",
-            f"Their attacks end on {site} in {ins.sample} (league {ins.league_rate:.0%}). Shade an extra player "
+            f"Their attacks end on {site} in {ins.sample} ({ins.peers}: {ins.league_rate:.0%}). Shade an extra player "
             f"or your stall utility there, and plan the retake for {site}.", ins)
 
     if ins.category == "Utility":
@@ -102,14 +102,21 @@ def warning(ins: Insight) -> Suggestion:
     else:
         head = f"Opponents know you rarely buy the {t.get('label', 'Operator')} on {m} {side}"
         tip = "Expect them to take long duels; a surprise buy can punish it."
-    return Suggestion(head, f"{ins.sample}" + (f" (league {ins.league_rate:.0%})" if ins.league_rate is not None else "")
+    return Suggestion(head, f"{ins.sample}" + (f" ({ins.peers}: {ins.league_rate:.0%})" if ins.league_rate is not None else "")
                       + f". {tip}", ins)
 
 
-def game_plan(insights: list[Insight], self_scout: bool, limit: int = 8) -> list[Suggestion]:
-    """Best-first suggestions, at most one per (map, side, category) so one map can't fill the list."""
+def game_plan(insights: list[Insight], self_scout: bool, limit: int = 8,
+              include_departed: bool = False) -> list[Suggestion]:
+    """Best-first suggestions, at most one per (map, side, category) so one map can't fill the list.
+
+    Insights about players no longer on the team's latest roster are skipped unless asked for: their
+    tendencies are real but may not apply to the team you'll actually face.
+    """
     out, seen = [], set()
     for ins in insights:
+        if ins.departed and not include_departed:
+            continue
         key = (ins.map, ins.side, ins.category, ins.tags.get("ability"))
         if key in seen:
             continue
