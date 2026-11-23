@@ -1,0 +1,19 @@
+[project]
+name = "opscope"
+version = "0.1.0"
+description = "VALORANT Operator & utility scouting tool for Cloud9 coaches"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pandas",
+    "plotly",
+    "streamlit",
+    "python-dotenv",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/opscope"]

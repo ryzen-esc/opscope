@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets / local config
+.env
+
+# GRID data — NEVER commit (hackathon data terms forbid it)
+data/
+cache/
+*.zst
+*.jsonl
+*.parquet
+
+# macOS
+.DS_Store
+
+# Keep .idea/ and .junie/ committed (rules encourage it), but skip personal files
+.idea/workspace.xml
+.idea/shelf/
