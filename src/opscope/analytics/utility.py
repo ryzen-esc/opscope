@@ -14,6 +14,7 @@ import pandas as pd
 
 from opscope.analytics.operator import Scope, _filter_rounds, team_rounds, time_bucket
 from opscope.load import load
+from opscope.zones import nearest_callout
 
 SPOT_RADIUS_CM = 400  # casts within 4 m count as "the same spot"
 
@@ -108,7 +109,10 @@ class UtilityReport:
                              "rounds": s["rounds"], "rounds_on_agent": denom,
                              "share": s["rounds"] / denom if denom else 0.0})
         out = pd.DataFrame(rows)
-        return out.sort_values("rounds", ascending=False).reset_index(drop=True) if not out.empty else out
+        if out.empty:
+            return out
+        out["area"] = nearest_callout(map_name, out["x"], out["y"])
+        return out.sort_values("rounds", ascending=False).reset_index(drop=True)
 
     def agent_rounds_by_map(self, map_name: str) -> dict:
         r = self.rounds[self.rounds["map"] == map_name]

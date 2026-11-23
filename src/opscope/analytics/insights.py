@@ -194,14 +194,16 @@ def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
                 sc = surprise(k, n, lg_share)
                 if sc <= 0 or k / n <= lg_share:
                     continue  # standard lineup, or less predictable than a typical player
+                area = row.get("area")
+                where = f" near <b>{area}</b>" if isinstance(area, str) else ""
                 out.append(Insight(
                     category="Utility", map=m, side=side,
                     text=f"<b>{row['player_name']}</b> ({row['agent'].title()}) puts <b>{pretty(row['ability'])}</b> "
-                         f"in the same spot on {SIDE_WORD[side]} on <b>{m.title()}</b>: <b>{of(k, n, 'rounds on ' + row['agent'].title())}</b> "
+                         f"in the same spot{where} on {SIDE_WORD[side]} on <b>{m.title()}</b>: <b>{of(k, n, 'rounds on ' + row['agent'].title())}</b> "
                          f"(typical player: {lg_share:.0%} in their usual spot).",
                     k=k, n=n, unit=f"rounds on {row['agent'].title()}", score=sc,
                     tags={"player": row["player_name"], "ability": row["ability"], "x": row["x"], "y": row["y"],
-                          "util_class": row["util_class"]}))
+                          "util_class": row["util_class"], "area": area if isinstance(area, str) else None}))
     return out
 
 

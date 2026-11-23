@@ -7,6 +7,7 @@ from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
 from opscope.ui.cards import insight, rate_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import BUCKET_COLORS, add_density, add_points_by_bucket, add_sightlines, base_map
+from opscope.zones import nearest_callout
 
 WEAPONS = {"Operator": "operator", "Odin": "odin", "Outlaw": "outlaw", "Marshal": "marshal"}
 
@@ -95,8 +96,9 @@ with left:
     if show_lines:
         add_sightlines(fig, sight, name=f"{gun} kills")
     if not shown.empty:
-        tmp = shown.assign(time=shown["t"].round(0).astype(int).astype(str) + "s", via=shown["source"])
-        add_points_by_bucket(fig, tmp, ["player_name", "agent", "time", "via"])
+        tmp = shown.assign(time=shown["t"].round(0).astype(int).astype(str) + "s", via=shown["source"],
+                           area=nearest_callout(map_name, shown["x"], shown["y"]))
+        add_points_by_bucket(fig, tmp, ["player_name", "agent", "area", "time", "via"])
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
     gun_rounds_map = int(r.holders["map"].eq(map_name).sum())
     seen_rounds = shown[["game_id", "round_num"]].drop_duplicates().shape[0]
@@ -104,6 +106,12 @@ with left:
                f"({len(shown)} positions from {of(seen_rounds, gun_rounds_map, f'{gun} rounds')} on {map_name.title()}). "
                f"GRID records a position only when a player shoots, gets hit or uses an ability, so quiet rounds "
                f"leave gaps. Lines: {len(sight)} {gun} kills, shooter → victim. Positions are ±1–4 m.")
+    if seen_rounds:
+        areas = shown.assign(area=nearest_callout(map_name, shown["x"], shown["y"])).dropna(subset=["area"])
+        per_area = areas.drop_duplicates(["game_id", "round_num", "area"])["area"].value_counts().head(3)
+        if len(per_area):
+            parts = ", ".join(f"<b>{a}</b> ({of(int(k), seen_rounds, 'rounds')})" for a, k in per_area.items())
+            insight(f"Where the {gun} holder shows up in these time windows: {parts}.")
     a = r.aggression_summary() if f["maps"] else None
     if a and a["median"] is not None and a["n"] >= MIN_SAMPLE:
         style = "aggressive" if a["percentile"] >= 0.6 else "passive" if a["percentile"] <= 0.4 else "typical"

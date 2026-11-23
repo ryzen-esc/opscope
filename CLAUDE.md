@@ -59,7 +59,8 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
   - Lesson: habits need a league baseline. Without one, "Viper wall in the same spot 70/71" topped every report, but that's a standard lineup.
   - `zones.py` + `sites.yaml`: bomb sites found by k-means on planter positions (2 per map, 3 on Haven/Lotus). Names (A/B/C) come from matching each centre to the nearest "Site" callout from valorant-api.com (`/v1/maps` → `callouts`). That API uses **the same x/y as GRID** (identity transform; all matches within 20 m, next site 40+ m away). The same callouts (A Main, Mid Courtyard, …) could name any position. The YAML holds only centres, so it's safe to commit.
   - The first report load for a team takes ~3–12 s (league habit baselines), then it's cached.
-- Next: M5 (anti-strat suggestions + polish, e.g. precomputing the baselines); optionally use the callouts so habit spots read "near A Main".
+- **Callouts:** `callouts.yaml` (346 named points on 16 maps, refreshed with `python -m opscope.zones --callouts`). `zones.nearest_callout(map, x, y)` names any position: within 8 m of a plant-derived site centre it's "A Site", else the nearest callout point (within 25 m). The letter is reliable; the exact area is a best guess near borders, because a callout is one point per area. Used in habit insights ("near B Main"), utility ring labels, report map labels, and Operator hover text plus an area summary.
+- Next: M5 (anti-strat suggestions + polish, e.g. precomputing the league baselines).
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.

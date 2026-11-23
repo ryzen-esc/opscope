@@ -22,6 +22,8 @@ VALORANT Operator & utility scouting for Cloud9 coaches. Built for the Cloud9 x 
 
 Uses official GRID esports data provided for the hackathon. The data is not included in this repository.
 
+Map callout names and positions (`src/opscope/callouts.yaml`) come from the community API at [valorant-api.com](https://valorant-api.com), which uses the same coordinate system as GRID. Bomb-site centres (`src/opscope/sites.yaml`) are averaged from plant positions and contain no match data.
+
 ## Built with
 
 PyCharm, Junie, JetBrains Air, Python, pandas, Plotly, Streamlit.

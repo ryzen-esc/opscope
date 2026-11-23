@@ -1,0 +1,1056 @@
+# Map callouts (name + x/y in game units), from the community API at valorant-api.com (/v1/maps).
+# Same coordinate system as GRID. Regenerate: uv run python -m opscope.zones --callouts
+abyss:
+- name: A Bridge
+  x: 5700
+  y: -375
+- name: A Link
+  x: 2800
+  y: -2450
+- name: A Lobby
+  x: 3250
+  y: 3400
+- name: A Main
+  x: 3800
+  y: 1650
+- name: A Secret
+  x: 3775
+  y: -3850
+- name: A Security
+  x: 4900
+  y: -2975
+- name: A Site
+  x: 4300
+  y: -200
+- name: A Tower
+  x: 3025
+  y: -125
+- name: A Vent
+  x: 1700
+  y: -325
+- name: Attacker Spawn
+  x: 950
+  y: 4950
+- name: B Danger
+  x: -5850
+  y: 700
+- name: B Link
+  x: -2000
+  y: -2350
+- name: B Lobby
+  x: -3650
+  y: 4025
+- name: B Main
+  x: -4450
+  y: 1525
+- name: B Nest
+  x: -4975
+  y: 2150
+- name: B Site
+  x: -4425
+  y: -1175
+- name: B Tower
+  x: -3925
+  y: -2500
+- name: Defender Spawn
+  x: 950
+  y: -5275
+- name: Mid Bend
+  x: -1700
+  y: 1075
+- name: Mid Bottom
+  x: -400
+  y: 575
+- name: Mid Catwalk
+  x: 600
+  y: 525
+- name: Mid Library
+  x: -325
+  y: -600
+- name: Mid Top
+  x: 775
+  y: -2375
+ascent:
+- name: A Garden
+  x: 3774
+  y: -7551
+- name: A Lobby
+  x: 4489
+  y: -3014
+- name: A Main
+  x: 5322
+  y: -4710
+- name: A Rafters
+  x: 6130
+  y: -8210
+- name: A Site
+  x: 6154
+  y: -6626
+- name: A Tree
+  x: 3981
+  y: -5939
+- name: A Window
+  x: 4023
+  y: -8181
+- name: A Wine
+  x: 7359
+  y: -4689
+- name: Attacker Spawn
+  x: 60
+  y: 50
+- name: B Boat House
+  x: -4485
+  y: -7763
+- name: B Lobby
+  x: -1491
+  y: -1390
+- name: B Main
+  x: -1984
+  y: -5841
+- name: B Site
+  x: -2344
+  y: -7549
+- name: Defender Spawn
+  x: 1995
+  y: -9745
+- name: Mid Bottom
+  x: 1122
+  y: -5952
+- name: Mid Catwalk
+  x: 2316
+  y: -4127
+- name: Mid Courtyard
+  x: 1223
+  y: -4587
+- name: Mid Cubby
+  x: 3387
+  y: -5130
+- name: Mid Link
+  x: -632
+  y: -4280
+- name: Mid Market
+  x: 1089
+  y: -7363
+- name: Mid Pizza
+  x: 1802
+  y: -7262
+- name: Mid Top
+  x: 2754
+  y: -2130
+bind:
+- name: A Bath
+  x: 9107
+  y: 4450
+- name: A Cubby
+  x: 8605
+  y: 175
+- name: A Exit
+  x: 7550
+  y: 5874
+- name: A Lamps
+  x: 10649
+  y: 80
+- name: A Link
+  x: 6366
+  y: -1007
+- name: A Lobby
+  x: 6113
+  y: 3159
+- name: A Short
+  x: 7983
+  y: 804
+- name: A Site
+  x: 10748
+  y: 2664
+- name: A Teleporter
+  x: 9432
+  y: 490
+- name: A Tower
+  x: 12873
+  y: 2557
+- name: Attacker Cave
+  x: 3920
+  y: 257
+- name: Attacker Spawn
+  x: 162
+  y: 78
+- name: B Elbow
+  x: 11213
+  y: -7095
+- name: B Exit
+  x: 8921
+  y: -1763
+- name: B Fountain
+  x: 5737
+  y: -5390
+- name: B Garden
+  x: 9144
+  y: -5598
+- name: B Hall
+  x: 12982
+  y: -4942
+- name: B Link
+  x: 6362
+  y: -2621
+- name: B Long
+  x: 7667
+  y: -6513
+- name: B Short
+  x: 7424
+  y: -3056
+- name: B Site
+  x: 11108
+  y: -4831
+- name: B Teleporter
+  x: 9028
+  y: -7224
+- name: B Window
+  x: 8827
+  y: -4309
+- name: Defender Spawn
+  x: 14642
+  y: -1018
+breeze:
+- name: A Bridge
+  x: 8400
+  y: 3525
+- name: A Lobby
+  x: -1250
+  y: 3400
+- name: A Pyramids
+  x: 5200
+  y: 5450
+- name: A Ramp
+  x: 7300
+  y: 2725
+- name: A Shop
+  x: 2150
+  y: 4250
+- name: A Site
+  x: 4825
+  y: 6325
+- name: Attacker Spawn
+  x: -575
+  y: -450
+- name: B Back
+  x: 7550
+  y: -5675
+- name: B Elbow
+  x: 4675
+  y: -2900
+- name: B Main
+  x: 3550
+  y: -4450
+- name: B Site
+  x: 6450
+  y: -5650
+- name: B Tunnel
+  x: 6450
+  y: -1450
+- name: B Wall
+  x: 8550
+  y: -3000
+- name: B Window
+  x: 2225
+  y: -4175
+- name: Defender Arches
+  x: 9400
+  y: -1300
+- name: Defender Spawn
+  x: 8900
+  y: 3525
+- name: Mid Bottom
+  x: 1575
+  y: 475
+- name: Mid Cannon
+  x: 2900
+  y: -1850
+- name: Mid Hall
+  x: 4257
+  y: 2491
+- name: Mid Nest
+  x: 8650
+  y: 275
+- name: Mid Pillar
+  x: 4175
+  y: 475
+- name: Mid Top
+  x: 6175
+  y: 525
+- name: Mid Wood Doors
+  x: 4825
+  y: 2550
+corrode:
+- name: A Crane
+  x: 4236
+  y: -4045
+- name: A Elbow
+  x: 5583
+  y: -2074
+- name: A Link
+  x: 1783
+  y: -1050
+- name: A Lobby
+  x: 4333
+  y: 2600
+- name: A Main
+  x: 5933
+  y: 1225
+- name: A Pocket
+  x: 5583
+  y: -799
+- name: A Site
+  x: 3458
+  y: -1825
+- name: A Yard
+  x: 4333
+  y: -800
+- name: Attacker Spawn
+  x: -25
+  y: 5675
+- name: B Arch
+  x: -3099
+  y: -4400
+- name: B Elbow
+  x: -5592
+  y: -2925
+- name: B Link
+  x: -1292
+  y: -1825
+- name: B Lobby
+  x: -1667
+  y: 2775
+- name: B Main
+  x: -2717
+  y: 750
+- name: B Site
+  x: -2717
+  y: -1175
+- name: B Tower
+  x: -3517
+  y: -2925
+- name: Defender Spawn
+  x: 8
+  y: -5750
+- name: Mid Bottom
+  x: 133
+  y: 175
+- name: Mid Stairs
+  x: 133
+  y: -1475
+- name: Mid Top
+  x: 133
+  y: -1825
+- name: Mid Window
+  x: 133
+  y: -3100
+district:
+- name: Attacker Box
+  x: -2225
+  y: 1700
+- name: Attacker Nest
+  x: -2200
+  y: 800
+- name: Attacker Spawn
+  x: -1200
+  y: 3000
+- name: Attacker Stairs
+  x: -200
+  y: 1200
+- name: Attacker Wall
+  x: 700
+  y: 900
+- name: Defender Box
+  x: -2225
+  y: -2900
+- name: Defender Nest
+  x: -2200
+  y: -1700
+- name: Defender Spawn
+  x: -1200
+  y: -3000
+- name: Defender Stairs
+  x: -200
+  y: -1200
+- name: Defender Wall
+  x: 700
+  y: -900
+- name: Mid Generator
+  x: -1400
+  y: -1000
+- name: Mid Horseshoe
+  x: -3200
+  y: -900
+- name: Mid Sewer
+  x: 700
+  y: -900
+drift:
+- name: Attacker Alley
+  x: 3200
+  y: 2200
+- name: Attacker Nest
+  x: 2000
+  y: -3400
+- name: Attacker Spawn
+  x: 1200
+  y: -2200
+- name: Attacker Tower
+  x: -400
+  y: -1800
+- name: Attacker Yard
+  x: -1600
+  y: -3400
+- name: Defender Alley
+  x: -3200
+  y: -2200
+- name: Defender Nest
+  x: -2000
+  y: 3400
+- name: Defender Spawn
+  x: -1200
+  y: 2200
+- name: Defender Tower
+  x: 400
+  y: 1800
+- name: Defender Yard
+  x: 1600
+  y: 3400
+- name: Mid Water
+  x: -800
+  y: -600
+fracture:
+- name: A Dish
+  x: 11297
+  y: 1392
+- name: A Door
+  x: 5808
+  y: 1940
+- name: A Drop
+  x: 9307
+  y: 2826
+- name: A Gate
+  x: 12962
+  y: 1565
+- name: A Hall
+  x: 5064
+  y: 2058
+- name: A Link
+  x: 8578
+  y: 1302
+- name: A Main
+  x: 5879
+  y: 3451
+- name: A Rope
+  x: 6639
+  y: 1053
+- name: A Site
+  x: 8126
+  y: 3374
+- name: Attacker Bridge
+  x: 13204
+  y: -756
+- name: Attacker Spawn
+  x: 4346
+  y: -948
+- name: B Arcade
+  x: 10181
+  y: -4179
+- name: B Bench
+  x: 11473
+  y: -2897
+- name: B Canteen
+  x: 7111
+  y: -3138
+- name: B Generator
+  x: 8362
+  y: -3380
+- name: B Link
+  x: 9198
+  y: -2741
+- name: B Main
+  x: 5967
+  y: -5343
+- name: B Site
+  x: 8178
+  y: -5942
+- name: B Tower
+  x: 9155
+  y: -5601
+- name: B Tree
+  x: 4965
+  y: -4109
+- name: B Tunnel
+  x: 7402
+  y: -4058
+- name: Defender Spawn
+  x: 9156
+  y: -677
+haven:
+- name: A Garden
+  x: 3100
+  y: -4684
+- name: A Link
+  x: 4244
+  y: -10716
+- name: A Lobby
+  x: 3439
+  y: -6260
+- name: A Long
+  x: 6210
+  y: -6901
+- name: A Sewer
+  x: 3453
+  y: -7916
+- name: A Site
+  x: 6309
+  y: -9226
+- name: A Tower
+  x: 6721
+  y: -10473
+- name: Attacker Spawn
+  x: 1742
+  y: -2643
+- name: B Back
+  x: 1966
+  y: -10665
+- name: B Site
+  x: 1885
+  y: -9231
+- name: C Cubby
+  x: -2120
+  y: -6562
+- name: C Garage
+  x: 180
+  y: -8000
+- name: C Link
+  x: -88
+  y: -10004
+- name: C Lobby
+  x: -1642
+  y: -5720
+- name: C Long
+  x: -3357
+  y: -5991
+- name: C Site
+  x: -2378
+  y: -9011
+- name: C Window
+  x: -10
+  y: -8993
+- name: Defender Spawn
+  x: 2946
+  y: -12715
+- name: Mid Courtyard
+  x: 1822
+  y: -6713
+- name: Mid Doors
+  x: 151
+  y: -6263
+- name: Mid Window
+  x: 1950
+  y: -5568
+icebox:
+- name: A Belt
+  x: -7200
+  y: -850
+- name: A Nest
+  x: -6650
+  y: 900
+- name: A Pipes
+  x: -6150
+  y: 450
+- name: A Rafters
+  x: -6450
+  y: 4250
+- name: A Screen
+  x: -5100
+  y: 3325
+- name: A Site
+  x: -6400
+  y: 3200
+- name: Attacker Spawn
+  x: -3925
+  y: -4450
+- name: B Back
+  x: 251
+  y: 4269
+- name: B Cubby
+  x: 1050
+  y: -975
+- name: B Fence
+  x: 363
+  y: 3595
+- name: B Garage
+  x: -1250
+  y: -1425
+- name: B Green
+  x: -450
+  y: -700
+- name: B Hall
+  x: 300
+  y: 3050
+- name: B Hut
+  x: -1425
+  y: 4400
+- name: B Kitchen
+  x: -2221
+  y: 3404
+- name: B Orange
+  x: -632
+  y: 1700
+- name: B Site
+  x: 1725
+  y: 2575
+- name: B Snow Pile
+  x: -1775
+  y: 2500
+- name: B Snowman
+  x: 2250
+  y: 3960
+- name: B Tube
+  x: -2300
+  y: 1275
+- name: B Yellow
+  x: 2050
+  y: -25
+- name: Defender Spawn
+  x: -3750
+  y: 7075
+- name: Mid Blue
+  x: -2825
+  y: 975
+- name: Mid Boiler
+  x: -3375
+  y: 2925
+- name: Mid Pallet
+  x: -4450
+  y: 1775
+kasbah:
+- name: Attacker Angle Box
+  x: 0
+  y: 0
+- name: Attacker Flat Box
+  x: 0
+  y: 0
+- name: Attacker Link
+  x: 0
+  y: 0
+- name: Attacker Nest
+  x: 0
+  y: 0
+- name: Attacker Ramp
+  x: 0
+  y: 0
+- name: Attacker Spawn
+  x: 0
+  y: 0
+- name: Attacker Spawn
+  x: 0
+  y: 0
+- name: Attacker Tunnel
+  x: 0
+  y: 0
+- name: Attacker Window
+  x: 0
+  y: 0
+- name: Defender Angle Box
+  x: 0
+  y: 0
+- name: Defender Flat Box
+  x: 0
+  y: 0
+- name: Defender Link
+  x: 0
+  y: 0
+- name: Defender Nest
+  x: 0
+  y: 0
+- name: Defender Ramp
+  x: 0
+  y: 0
+- name: Defender Spawn
+  x: 0
+  y: 0
+- name: Defender Spawn
+  x: 0
+  y: 0
+- name: Defender Tunnel
+  x: 0
+  y: 0
+- name: Defender Window
+  x: 0
+  y: 0
+- name: Mid Pit
+  x: 0
+  y: 0
+- name: Mid Pit
+  x: 0
+  y: 0
+- name: Mid Tower
+  x: 0
+  y: 0
+- name: Mid Tower
+  x: 0
+  y: 0
+lotus:
+- name: A Door
+  x: 5609
+  y: 5204
+- name: A Drop
+  x: 9516
+  y: 6093
+- name: A Hut
+  x: 7917
+  y: 5557
+- name: A Link
+  x: 6011
+  y: 2088
+- name: A Lobby
+  x: 2686
+  y: 2927
+- name: A Main
+  x: 5288
+  y: 4160
+- name: A Root
+  x: 4401
+  y: 3294
+- name: A Rubble
+  x: 4401
+  y: 4918
+- name: A Site
+  x: 7736
+  y: 5557
+- name: A Stairs
+  x: 8258
+  y: 3861
+- name: A Top
+  x: 9260
+  y: 5046
+- name: A Tree
+  x: 6150
+  y: 5557
+- name: Attacker Spawn
+  x: 1401
+  y: 777
+- name: B Main
+  x: 4877
+  y: -48
+- name: B Pillars
+  x: 3565
+  y: 668
+- name: B Site
+  x: 6368
+  y: 668
+- name: B Upper
+  x: 7683
+  y: 1517
+- name: C Bend
+  x: 5658
+  y: -5281
+- name: C Door
+  x: 4819
+  y: -1753
+- name: C Gravel
+  x: 8937
+  y: -1752
+- name: C Hall
+  x: 7902
+  y: -4266
+- name: C Link
+  x: 7504
+  y: -1378
+- name: C Lobby
+  x: 1404
+  y: -1577
+- name: C Main
+  x: 5311
+  y: -3148
+- name: C Mound
+  x: 3864
+  y: -1577
+- name: C Site
+  x: 6677
+  y: -4266
+- name: C Waterfall
+  x: 6720
+  y: -1994
+- name: Defender Spawn
+  x: 9687
+  y: 1698
+pearl:
+- name: A Art
+  x: 4562
+  y: 3407
+- name: A Dugout
+  x: 7661
+  y: 5854
+- name: A Flowers
+  x: 9264
+  y: 2507
+- name: A Link
+  x: 6055
+  y: 3783
+- name: A Main
+  x: 6369
+  y: 3825
+- name: A Restaurant
+  x: 4430
+  y: 2813
+- name: A Secret
+  x: 10458
+  y: 3832
+- name: A Site
+  x: 6614
+  y: 5570
+- name: Attacker Spawn
+  x: -550
+  y: -600
+- name: B Club
+  x: 800
+  y: -1450
+- name: B Hall
+  x: 7496
+  y: -4954
+- name: B Link
+  x: 4503
+  y: -592
+- name: B Main
+  x: 4050
+  y: -4375
+- name: B Ramp
+  x: 1750
+  y: -3800
+- name: B Screen
+  x: 6260
+  y: -5001
+- name: B Site
+  x: 5800
+  y: -2850
+- name: B Tower
+  x: 8533
+  y: -2851
+- name: B Tunnel
+  x: 8973
+  y: -2155
+- name: Defender Records
+  x: 8973
+  y: -1470
+- name: Defender Spawn
+  x: 11092
+  y: 379
+- name: Defender Water
+  x: 7808
+  y: 1800
+- name: Mid Connector
+  x: 6047
+  y: 1800
+- name: Mid Doors
+  x: 4701
+  y: 597
+- name: Mid Plaza
+  x: 2750
+  y: -325
+- name: Mid Shops
+  x: 800
+  y: -1450
+- name: Mid Top
+  x: 2075
+  y: 725
+split:
+- name: A Back
+  x: 7345
+  y: -7858
+- name: A Lobby
+  x: 6814
+  y: -2458
+- name: A Main
+  x: 6280
+  y: -4493
+- name: A Rafters
+  x: 5435
+  y: -6258
+- name: A Ramps
+  x: 4330
+  y: -4750
+- name: A Screens
+  x: 5649
+  y: -8869
+- name: A Sewer
+  x: 4863
+  y: -2367
+- name: A Site
+  x: 6589
+  y: -6761
+- name: A Tower
+  x: 4637
+  y: -6748
+- name: Attacker Spawn
+  x: 1902
+  y: 60
+- name: B Alley
+  x: -1158
+  y: -8066
+- name: B Back
+  x: -3107
+  y: -7417
+- name: B Garage
+  x: -2191
+  y: -3848
+- name: B Link
+  x: -28
+  y: -2370
+- name: B Lobby
+  x: -1272
+  y: -1984
+- name: B Rafters
+  x: -637
+  y: -6071
+- name: B Site
+  x: -2167
+  y: -6265
+- name: B Stairs
+  x: 1061
+  y: -6761
+- name: B Tower
+  x: 169
+  y: -5290
+- name: Defender Spawn
+  x: 2142
+  y: -8965
+- name: Mid Bottom
+  x: 1923
+  y: -2899
+- name: Mid Mail
+  x: 1155
+  y: -4809
+- name: Mid Top
+  x: 2022
+  y: -4597
+- name: Mid Vent
+  x: 3155
+  y: -5339
+summit:
+- name: A Art
+  x: 9525
+  y: 9925
+- name: A Cave
+  x: 9525
+  y: 12125
+- name: A Garden
+  x: 7675
+  y: 9925
+- name: A Hall
+  x: 9525
+  y: 8600
+- name: A Link
+  x: 8250
+  y: 8050
+- name: A Lobby
+  x: 3175
+  y: 8625
+- name: A Main
+  x: 5500
+  y: 8625
+- name: A Site
+  x: 7675
+  y: 11600
+- name: Attacker Spawn
+  x: 1100
+  y: -100
+- name: B Drop
+  x: 9850
+  y: 75
+- name: B Gym
+  x: 10525
+  y: 3100
+- name: B Link
+  x: 7500
+  y: 3775
+- name: B Lobby
+  x: 5125
+  y: 3225
+- name: B Main
+  x: 6500
+  y: 1850
+- name: B Site
+  x: 8550
+  y: 1375
+- name: B Tower
+  x: 10175
+  y: 1450
+- name: B Trophy
+  x: 9075
+  y: 3675
+- name: Defender Spawn
+  x: 12075
+  y: 6175
+- name: Mid Bend
+  x: 6475
+  y: 7850
+- name: Mid Bottom
+  x: 7500
+  y: 5825
+- name: Mid Fountain
+  x: 5675
+  y: 6175
+- name: Mid Tiles
+  x: 4961
+  y: 4234
+- name: Mid Top
+  x: 4025
+  y: 6525
+- name: Mid Window
+  x: 8700
+  y: 5825
+sunset:
+- name: A Alley
+  x: 3400
+  y: 3600
+- name: A Elbow
+  x: 200
+  y: 4200
+- name: A Link
+  x: 2200
+  y: 3000
+- name: A Lobby
+  x: -1800
+  y: 2000
+- name: A Main
+  x: -400
+  y: 2200
+- name: A Site
+  x: 1000
+  y: 3200
+- name: Attacker Spawn
+  x: -6025
+  y: -400
+- name: B Boba
+  x: 2200
+  y: -4800
+- name: B Lobby
+  x: -3400
+  y: -2600
+- name: B Main
+  x: -2000
+  y: -5650
+- name: B Market
+  x: -200
+  y: -3400
+- name: B Site
+  x: -600
+  y: -5850
+- name: Defender Spawn
+  x: 3805
+  y: -1989
+- name: Mid Bottom
+  x: -1800
+  y: -2025
+- name: Mid Courtyard
+  x: -600
+  y: -1200
+- name: Mid Tiles
+  x: -1800
+  y: 400
+- name: Mid Top
+  x: 2000
+  y: -2000

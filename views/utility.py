@@ -66,9 +66,13 @@ if not habits.empty:
     habits = habits[habits["agent"].isin(pick)]
 strong = (habits[(habits["rounds_on_agent"] >= MIN_SAMPLE) & (habits["share"] >= 0.4)]
           .sort_values(["share", "rounds"], ascending=False).head(5).reset_index(drop=True)) if not habits.empty else habits
-strong["label"] = [SPOT_MARKS[i] for i in range(len(strong))]
+if not strong.empty:
+    areas = strong["area"] if "area" in strong else [None] * len(strong)
+    strong["label"] = [f"{SPOT_MARKS[i]} {a}" if a else SPOT_MARKS[i] for i, a in enumerate(areas)]
+    strong["mark"] = [SPOT_MARKS[i] for i in range(len(strong))]
 for _, h in strong.head(3).iterrows():
-    insight(f"{h['label']} <b>{h['player_name']}</b> ({h['agent'].title()}) puts <b>{pretty(h['ability'])}</b> in the same spot "
+    where = f" near <b>{h['area']}</b>" if h.get("area") else ""
+    insight(f"{h['mark']} <b>{h['player_name']}</b> ({h['agent'].title()}) puts <b>{pretty(h['ability'])}</b> in the same spot{where} "
             f"(±{SPOT_RADIUS_CM // 100} m) in <b>{of(int(h['rounds']), int(h['rounds_on_agent']), unit + ' on ' + h['agent'].title())}</b> "
             f"on {map_name.title()}.")
 if strong.empty and not casts.empty:

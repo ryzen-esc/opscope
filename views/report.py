@@ -98,7 +98,8 @@ with left:
     if hab:
         fig.add_trace(go.Scatter(
             x=[i.tags["x"] for i in hab], y=[i.tags["y"] for i in hab], mode="markers+text",
-            text=[f"{i.tags['player']}: {i.tags['ability'].replace('-', ' ')}" for i in hab], textposition="top center",
+            text=[f"{i.tags['player']}: {i.tags['ability'].replace('-', ' ')}"
+                  + (f" ({i.tags['area']})" if i.tags.get("area") else "") for i in hab], textposition="top center",
             textfont=dict(color="#00AEEF", size=11), marker=dict(size=11, color="#00AEEF", symbol="diamond"),
             name="predictable utility", hoverinfo="text"))
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})

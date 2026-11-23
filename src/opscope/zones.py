@@ -1,10 +1,14 @@
-"""Bomb sites per map, found from where the spike is planted.
+"""Map zones: bomb sites (found from where the spike is planted) and named callouts.
 
 Plants cluster tightly (3–7 m) around each site, so k-means on planter positions finds the sites. The data
 can't tell "A" from "B", so `sites.yaml` stores each site's centre and a human-editable name.
 Regenerate the centres with `uv run python -m opscope.zones --init` (keeps names already set, matched by position).
 
 The YAML holds only aggregate centre coordinates (no match data), so it is safe to commit.
+
+Callouts ("A Main", "Mid Courtyard", ...) come from the community API at valorant-api.com (/v1/maps), whose
+coordinates are the same x/y as GRID's. `uv run python -m opscope.zones --callouts` refreshes `callouts.yaml`.
+A position is labelled with its nearest callout point, which approximates the callout's area.
 """
 from __future__ import annotations
 
@@ -18,6 +22,9 @@ import yaml
 
 SITES_FILE = Path(__file__).with_name("sites.yaml")
 SITE_COUNT = {"haven": 3, "lotus": 3}  # every other map has two sites
+CALLOUTS_FILE = Path(__file__).with_name("callouts.yaml")
+CALLOUTS_URL = "https://valorant-api.com/v1/maps"
+MAX_CALLOUT_DIST_CM = 2500  # farther than 25 m from every callout point: leave unnamed
 
 
 def kmeans(points: np.ndarray, k: int, seeds: int = 8, iters: int = 60) -> np.ndarray:
@@ -71,6 +78,63 @@ def assign_site(map_name: str, x: np.ndarray | pd.Series, y: np.ndarray | pd.Ser
     return names[d.argmin(1)]
 
 
+@cache
+def callouts() -> dict[str, list[dict]]:
+    """{map: [{"name": "A Main", "x": ..., "y": ...}, ...]} from callouts.yaml."""
+    if not CALLOUTS_FILE.exists():
+        return {}
+    return yaml.safe_load(CALLOUTS_FILE.read_text()) or {}
+
+
+def callout_name(super_region: str, region: str) -> str:
+    """'A' + 'Main' -> 'A Main'; 'Attacker Side' + 'Spawn' -> 'Attacker Spawn'; 'Mid' + 'Top' -> 'Mid Top'."""
+    prefix = super_region.replace(" Side", "").strip()
+    return f"{prefix} {region}".strip()
+
+
+SITE_RADIUS_CM = 800  # plants spread 3–7 m around a site centre
+
+
+def nearest_callout(map_name: str, x, y) -> np.ndarray:
+    """Area name for each point, or None if nothing named is within MAX_CALLOUT_DIST_CM.
+
+    A callout is a single point in the middle of an area, so "nearest point" is approximate: on a big site the
+    centre can be closer to a neighbouring callout's point. Bomb sites are known precisely (from plants), so
+    anything within SITE_RADIUS_CM of a site centre is named after the site; everything else gets the
+    nearest callout. The letter (A/B/C/Mid) is reliable; the exact area name is a best guess near borders.
+    """
+    pts = callouts().get(map_name)
+    x, y = np.atleast_1d(np.asarray(x, float)), np.atleast_1d(np.asarray(y, float))
+    out = np.full(len(x), None, dtype=object)
+    if pts:
+        cx = np.array([p["x"] for p in pts])
+        cy = np.array([p["y"] for p in pts])
+        names = np.array([p["name"] for p in pts], dtype=object)
+        d = np.hypot(x[:, None] - cx[None], y[:, None] - cy[None])
+        out = names[d.argmin(1)]
+        out[d.min(1) > MAX_CALLOUT_DIST_CM] = None
+    for s in sites().get(map_name, []):
+        on_site = np.hypot(x - s["x"], y - s["y"]) <= SITE_RADIUS_CM
+        out[on_site] = s["name"].replace(" site", " Site")
+    return out
+
+
+def fetch_callouts(url: str = CALLOUTS_URL) -> dict[str, list[dict]]:
+    """Download map callouts (only names + x/y are kept)."""
+    import json
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=60) as resp:
+        data = json.load(resp)["data"]
+    out = {}
+    for m in data:
+        pts = [{"name": callout_name(c["superRegionName"], c["regionName"]),
+                "x": round(float(c["location"]["x"])), "y": round(float(c["location"]["y"]))}
+               for c in (m.get("callouts") or [])]
+        if pts:
+            out[m["displayName"].lower()] = sorted(pts, key=lambda p: p["name"])
+    return out
+
+
 def init_sites(min_plants: int = 20) -> dict:
     """Compute site centres from plants; keep existing names for centres within 15 m of an old one."""
     old = sites()
@@ -94,7 +158,15 @@ def init_sites(min_plants: int = 20) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Bomb-site centres per map")
     ap.add_argument("--init", action="store_true", help="(re)compute site centres from the cache and write the YAML")
+    ap.add_argument("--callouts", action="store_true", help="download callouts from valorant-api.com into callouts.yaml")
     args = ap.parse_args()
+    if args.callouts:
+        data = fetch_callouts()
+        header = ("# Map callouts (name + x/y in game units), from the community API at valorant-api.com (/v1/maps).\n"
+                  "# Same coordinate system as GRID. Regenerate: uv run python -m opscope.zones --callouts\n")
+        CALLOUTS_FILE.write_text(header + yaml.safe_dump(data, sort_keys=True))
+        callouts.cache_clear()
+        print(f"Wrote {CALLOUTS_FILE} ({sum(len(v) for v in data.values())} callouts on {len(data)} maps)")
     if args.init:
         data = init_sites()
         SITES_FILE.parent.mkdir(exist_ok=True)
