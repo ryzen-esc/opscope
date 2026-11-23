@@ -22,7 +22,7 @@ Filters for team, opponent, map, side, patch and event apply everywhere. Each te
 
 - **Cloud9 (VCT Americas 2025)** ran an Operator in **30 of 80** Haven defense rounds but only **2 of 134** on Lotus, their most-played map (typical VCT 2025 team: 8% on Lotus). OXY held it in 93 of their 96 Op rounds.
 - **NRG** brought an **Odin** in **47 of 117** Lotus defense rounds, against 11% for the typical VCT 2025 team. It was usually s0m on Omen (41 of 47), and early in the round the gun was seen near **A Door** in 32 of the 45 rounds where its holder showed up.
-- Habits are compared with other players. neT's Viper wall goes up from the same spot in 70 of 71 rounds, but so does the typical Viper's (a standard lineup), so OpScope doesn't flag it. It does flag neT's Killjoy turret near Mid Boiler on Icebox defense: the same spot in 25 of 26 rounds, where the typical VCT 2025 Killjoy is at 66%.
+- Habits are compared with other players. neT's Viper wall goes up from the same spot in 70 of 71 rounds, but so does the typical Viper's (a standard lineup), so OpScope doesn't flag it. It does flag neT's Killjoy turret near Mid Boiler on Icebox defense: the same spot in 25 of 26 rounds, where the typical VCT 2025 Killjoy is at 64%.
 
 ## Run it
 
@@ -41,7 +41,7 @@ uv run streamlit run app.py                # opens http://localhost:8501
 
 If you open the app before building the cache, it shows these steps instead of an error.
 
-**Tests:** `uv run pytest` (40 tests). They use synthetic GRID events; the page smoke test is skipped when no cache exists.
+**Tests:** `uv run pytest` (44 tests). They use synthetic GRID events; the page smoke test is skipped when no cache exists.
 
 In **PyCharm**, the shared run configurations in `.run/` (OpScope app, Build cache, Tests, Explore data) appear automatically.
 

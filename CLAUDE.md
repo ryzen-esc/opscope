@@ -71,6 +71,14 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
   - `analytics/roster.py`: roster per event (players with ≥20% of rounds); latest roster = latest event in the data. Insights about players not on it get `departed` (badge in the UI) and are skipped by `game_plan`.
   - The report states the roster and its date, and how many lineups the selected data mixes.
 - **Typical-team baseline:** gun and plant comparisons use `stats.typical_rate` = the median of other teams' own rates (teams with 16+ rounds, at least 4 teams; otherwise pooled), so one extreme team can't move it. Shown as "typical VCT 2025 team". The report's plant chart still shows the pooled distribution ("other teams' plants"). Measuring it showed the C9 "rarely Odin on Corrode" baseline (32%) is the real meta, not NRG.
+- **Code review fixes (6):**
+  - The build report merges per-series results across runs (`per_series`); a run with nothing new leaves it untouched.
+  - Multi-season teams are compared season by season, weighted by their rounds (`operator.season_weighted_rate`, phrased via `load.peer_group`).
+  - The habit baseline uses other teams' players only, season-matched, and follows Patch/Event filters (`player_habit_shares`, cached per cohort unfiltered).
+  - "Fired in X of Y" counts gun rounds only.
+  - A cancelled map start drops its rows immediately, so a same-id restart survives.
+  - Undo restores only the touched game's round state.
+  - The full rebuild was identical to before.
 - Left for Eli: screenshots, demo video, deciding further JetBrains AI use (update the tool lists), the Claude privacy opt-out, making the repo public, Devpost. Never push or publish without Eli's go-ahead.
 
 ## Working with Eli

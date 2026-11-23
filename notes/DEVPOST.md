@@ -24,7 +24,7 @@ Every number shows its sample ("30 of 80 rounds"). Teams are compared only with 
   - area names from community callouts, verified to share GRID's coordinates
   - a landing-spot model validated on held-out matches
 - **UI:** Streamlit + Plotly, with a minimap drawn from 1.4M recorded positions (no Riot art).
-- **Tests:** 40, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
+- **Tests:** 44, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
 - **Tools:** built in **PyCharm** with **Junie**, **JetBrains AI Assistant** and **Claude Code**. See "JetBrains tools" below and AI_SHOWCASE.md.
 
 ## Challenges we ran into

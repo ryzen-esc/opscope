@@ -34,7 +34,7 @@ if rows:
 st.header("Reading a card")
 st.markdown(f"""
 - **"48 of 64 rounds"** is the evidence: how often it happened and out of how many chances.
-- **Typical team** ("typical VCT 2025 team", etc.) is the median of every other team's own rate in the **same tier and season**, on the same map and side. Tiers and seasons play different metas, so they aren't mixed, and using the median means one extreme team can't move it.
+- **Typical team** ("typical VCT 2025 team", etc.) is the median of every other team's own rate in the **same tier and season**, on the same map and side. Tiers and seasons play different metas, so they aren't mixed (a team that played two seasons is compared season by season), and using the median means one extreme team can't move it.
 - **Rosters:** each team's latest roster in the data is shown on the report. Tendencies about players who later left are marked and left out of the game plan.
 - **95% range** is how far the true rate could plausibly be from what we saw, given the sample (a Wilson interval).
   Small samples give wide ranges.

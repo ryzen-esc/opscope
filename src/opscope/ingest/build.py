@@ -133,6 +133,26 @@ def consolidate(out: Path) -> dict[str, int]:
     return sizes
 
 
+def merge_report(prev: dict, results: list[dict], failures: list[dict], sizes: dict, seconds: float) -> dict:
+    """Combine this run's per-series results with the previous report, so a partial or repeated build
+    keeps the totals for every series in the cache (the How it works page reads them)."""
+    per_series = dict(prev.get("per_series", {}))
+    for r in results:
+        per_series[r["series_id"]] = r
+    built_now = {r["series_id"] for r in results}
+    failed = [f for f in prev.get("failures", []) if f["series_id"] not in built_now]
+    failed = [f for f in failed if f["series_id"] not in {x["series_id"] for x in failures}] + failures
+    totals = Counter()
+    for r in per_series.values():
+        totals.update({k: v for k, v in r.items() if isinstance(v, int) and not isinstance(v, bool)})
+    return {
+        "version": VERSION, "built_series": len(per_series), "failures": failed, "table_rows": sizes,
+        "totals": dict(totals),
+        "mismatches": {sid: r["mismatch_games"] for sid, r in per_series.items() if r.get("mismatch_games")},
+        "seconds": seconds, "per_series": per_series,
+    }
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--series", action="append", help="only these series ids (repeatable)")
@@ -164,23 +184,16 @@ def main(argv: list[str] | None = None) -> None:
             if i % 50 == 0 or i == len(rows):
                 print(f"  {i}/{len(rows)} series ({time.time() - started:.0f}s)")
 
-    sizes = consolidate(out)
-    totals = Counter()
-    for r in results:
-        totals.update({k: v for k, v in r.items() if isinstance(v, int) and not isinstance(v, bool)})
-    report = {
-        "version": VERSION, "built_series": len(results), "failures": failures, "table_rows": sizes,
-        "totals": dict(totals),
-        "mismatches": {r["series_id"]: r["mismatch_games"] for r in results if r.get("mismatch_games")},
-        "seconds": round(time.time() - started, 1),
-    }
     report_path = out / "ingest_report.json"
-    if report_path.exists() and not args.force and args.series is None:
-        prev = json.loads(report_path.read_text())
-        report["previous_built_series"] = prev.get("built_series")
+    if not results and not failures and report_path.exists():
+        print("Nothing new to build; cache and report unchanged.")
+        return
+    sizes = consolidate(out)
+    report = merge_report(json.loads(report_path.read_text()) if report_path.exists() else {},
+                          results, failures, sizes, round(time.time() - started, 1))
     report_path.write_text(json.dumps(report, indent=2))
     print(json.dumps({k: report[k] for k in ("built_series", "table_rows", "seconds")}, indent=2))
-    print(f"{len(failures)} failures, {len(report['mismatches'])} series with round-count mismatches")
+    print(f"{len(report['failures'])} failures, {len(report['mismatches'])} series with round-count mismatches")
 
     # League baselines depend on the tables: drop stale ones and precompute fresh ones so reports load fast.
     if results and not args.no_baselines:

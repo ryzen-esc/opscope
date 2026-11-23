@@ -49,3 +49,29 @@ def test_rosters_by_event_latest_roster_and_departures(monkeypatch):
     assert roster.lineups_in("T", ["Kickoff", "Stage 1", "Stage 2"]) == 3
     assert roster.lineups_in("T", ["Stage 2"]) == 1
     roster.team_rosters.cache_clear()
+
+
+def test_build_report_merges_runs_instead_of_overwriting():
+    from opscope.ingest.build import merge_report
+    first = merge_report({}, [{"series_id": "a", "events": 10, "rollback_applied": 2},
+                              {"series_id": "b", "events": 5}], [], {"rounds": 3}, 1.0)
+    again = merge_report(first, [{"series_id": "b", "events": 6}], [], {"rounds": 3}, 0.5)   # rebuild one series
+    assert again["built_series"] == 2
+    assert again["totals"]["events"] == 16 and again["totals"]["rollback_applied"] == 2
+    failed = merge_report(again, [], [{"series_id": "c", "error": "x"}], {"rounds": 3}, 0.1)
+    assert failed["built_series"] == 2 and [f["series_id"] for f in failed["failures"]] == ["c"]
+
+
+def test_season_weighted_rate_compares_each_season_with_itself():
+    from opscope.analytics.operator import season_weighted_rate
+    from opscope.load import peer_group
+    # team: 30 rounds in 2025, 10 in 2026. Other teams: 10% in 2025, 50% in 2026 (four teams each, 20 rounds)
+    team = pd.DataFrame({"cohort": ["gc-2025"] * 30 + ["gc-2026"] * 10})
+    rows = []
+    for cohort, hits in (("gc-2025", 2), ("gc-2026", 10)):
+        for t in "abcd":
+            rows += [{"cohort": cohort, "team_id": f"{cohort}-{t}", "has": i < hits} for i in range(20)]
+    rate, method = season_weighted_rate(team, pd.DataFrame(rows), "has")
+    assert method == "typical team" and abs(rate - (30 * 0.10 + 10 * 0.50) / 40) < 1e-9
+    assert peer_group(["gc-2025", "gc-2026"]) == "same-season Game Changers"
+    assert peer_group(["vct-2025"]) == "VCT 2025"

@@ -124,7 +124,7 @@ class SeriesParser:
         if action.startswith("!"):
             self.report[f"rollback:{etype}"] += 1
             if etype == "series-!started-game":
-                self.rolled_back_games.add((e.get("target") or {}).get("id"))
+                self._drop_game((e.get("target") or {}).get("id"))
             elif etype.replace("-!", "-", 1) in _HANDLERS:
                 self._undo(e)
             return
@@ -134,6 +134,8 @@ class SeriesParser:
             return
         if etype == "series-started-game":
             self.game_id = (e.get("target") or {}).get("id")
+            if self.game_id in self.rolled_back_games:
+                self.report["restarted_same_game_id"] += 1
             g = self._game_state(e)
             if g:
                 self._register_game(g)
@@ -153,6 +155,27 @@ class SeriesParser:
             self.undo_stack.append((self._key(etype, e), before))
 
     # ---- rollback support ----------------------------------------------------------------
+    def _drop_game(self, gid: str | None) -> None:
+        """A cancelled map start: drop everything recorded for that attempt.
+
+        Dropping rows now (instead of filtering the id at the end) means a restart that reuses the same
+        game id is kept.
+        """
+        if not gid:
+            return
+        self.rolled_back_games.add(gid)
+        for rows in self.rows.values():
+            for row in rows:
+                if row.get("game_id") == gid:
+                    row["_drop"] = True
+        for key in [k for k in self.rounds if k[0] == gid]:
+            del self.rounds[key]
+        self.games.pop(gid, None)
+        self.round_num.pop(gid, None)
+        self.round_closed.pop(gid, None)
+        if self.game_id == gid:
+            self.game_id = None
+
     @staticmethod
     def _key(etype: str, e: dict) -> tuple:
         return etype, (e.get("actor") or {}).get("id"), (e.get("target") or {}).get("id")
@@ -174,6 +197,8 @@ class SeriesParser:
         key = self._key(e["type"].replace("-!", "-", 1), e)
         for i in range(len(self.undo_stack) - 1, -1, -1):
             if self.undo_stack[i][0] == key:
+                if i != len(self.undo_stack) - 1:
+                    self.report["rollback_out_of_order"] += 1
                 _, before = self.undo_stack.pop(i)
                 break
         else:
@@ -182,7 +207,14 @@ class SeriesParser:
         for table, n in before["lens"].items():
             for row in self.rows[table][n:]:
                 row["_drop"] = True
-        self.round_num, self.round_closed = before["round_num"], before["round_closed"]
+        # Restore round state only for the game(s) this event touched, so an out-of-order undo can't rewind
+        # unrelated games. (GRID undoes newest-first, where this is the same as restoring everything.)
+        for gid in {k[0] for k in before["rounds"]}:
+            for current, saved in ((self.round_num, before["round_num"]), (self.round_closed, before["round_closed"])):
+                if gid in saved:
+                    current[gid] = saved[gid]
+                else:
+                    current.pop(gid, None)
         for k, saved in before["rounds"].items():
             if saved is None:
                 self.rounds.pop(k, None)
@@ -347,7 +379,7 @@ class SeriesParser:
 
     # ---- finish --------------------------------------------------------------------------
     def finish(self) -> dict[str, list[dict]]:
-        dropped = self.rolled_back_games
+        dropped: set[str] = set()  # cancelled attempts were already dropped by _drop_game
         for table in self.rows:
             self.rows[table] = [r for r in self.rows[table] if not r.get("_drop")]
         rounds = [r for r in self.rounds.values() if r["game_id"] not in dropped]
@@ -371,7 +403,7 @@ class SeriesParser:
         out = {"games": [g for g in self.games.values() if g["game_id"] not in dropped], "rounds": rounds}
         for table in ("loadouts", "engagements", "casts", "snapshots"):
             out[table] = [row for row in self.rows[table] if row["game_id"] not in dropped]
-        self.report["rolled_back_games"] = len(dropped)
+        self.report["rolled_back_games"] = len(self.rolled_back_games)
         return out
 
 

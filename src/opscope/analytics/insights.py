@@ -16,12 +16,13 @@ from functools import cache
 import numpy as np
 import pandas as pd
 
-from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, league_scope, positions, team_rounds
-from opscope.analytics.stats import MIN_SAMPLE, of, pct, typical_rate, wilson
+from opscope.analytics.operator import (SETUP_WINDOW, Scope, _filter_rounds, league_scope, positions,
+                                       season_weighted_rate, team_rounds)
+from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
 from opscope.analytics.utility import UtilityScope, utility_report
 from opscope.ingest.build import cache_dir
 from opscope.analytics.roster import last_event_with, latest_roster, short_event
-from opscope.load import cohort_label, load
+from opscope.load import load, peer_group
 from opscope.zones import assign_site, nearest_callout, plant_positions
 
 SIDE_WORD = {"attacker": "attack", "defender": "defense"}
@@ -99,7 +100,7 @@ def gun_insights(s: Scope) -> list[Insight]:
                                         patches=s.patches, events=s.events))
     lg_s = league_scope(s, team, side=None)
     league = _filter_rounds(tr_all, lg_s)
-    who_lg = cohort_label(lg_s.cohorts)
+    who_lg = peer_group(lg_s.cohorts)
     out = []
     for weapon, label in GUNS.items():
         lo = d.loadouts.loc[d.loadouts["primary_fe"] == weapon,
@@ -114,14 +115,13 @@ def gun_insights(s: Scope) -> list[Insight]:
         lg = flag(league[league["team_id"] != s.team_id])  # league = everyone else
         tg = t.groupby(["map", "side"])["has"].agg(["sum", "size"])
         lgg = lg.groupby(["map", "side"])["has"].agg(["sum", "size"])
-        per_team = lg.groupby(["map", "side", "team_id"])["has"].agg(["sum", "size"])
         for (m, side), row in tg.iterrows():
             k, n = int(row["sum"]), int(row["size"])
             if n < 2 * MIN_SAMPLE or (m, side) not in lgg.index:
                 continue
             lk, ln = (int(v) for v in lgg.loc[(m, side)])
-            pt = per_team.loc[(m, side)]
-            lr, method = typical_rate(pt["sum"], pt["size"])
+            lr, method = season_weighted_rate(t[(t["map"] == m) & (t["side"] == side)],
+                                              lg[(lg["map"] == m) & (lg["side"] == side)], "has")
             peer = f"typical {who_lg} team" if method == "typical team" else f"all other {who_lg} rounds"
             sc = surprise(k, n, lr)
             if sc <= 0:
@@ -157,7 +157,7 @@ def plant_insights(s: Scope) -> list[Insight]:
                                                 opponents=s.opponents, patches=s.patches, events=s.events))
     lg_s = league_scope(s, rounds_scope, side="attacker")
     lg_scope = _filter_rounds(tr_all, lg_s)
-    who_lg = cohort_label(lg_s.cohorts)
+    who_lg = peer_group(lg_s.cohorts)
     plants = plant_sites()
     keys = ["game_id", "round_num"]
     team = rounds_scope.merge(plants[keys + ["site"]], on=keys)
@@ -172,8 +172,7 @@ def plant_insights(s: Scope) -> list[Insight]:
             lk, ln = int((lgm["site"] == site).sum()), len(lgm)
             if not ln:
                 continue
-            per_team = lgm.assign(hit=lgm["site"] == site).groupby("team_id")["hit"].agg(["sum", "size"])
-            lr, method = typical_rate(per_team["sum"], per_team["size"], min_rounds=MIN_SAMPLE)
+            lr, method = season_weighted_rate(g, lgm.assign(hit=lgm["site"] == site), "hit", min_rounds=MIN_SAMPLE)
             peer = f"typical {who_lg} team" if method == "typical team" else f"all other {who_lg} plants"
             sc = surprise(int(k), n, lr)
             more = pct(int(k), n) > lr
@@ -188,48 +187,73 @@ def plant_insights(s: Scope) -> list[Insight]:
     return out
 
 
-@cache
-def league_habit_rates(map_name: str, side: str, cohorts: tuple[str, ...] = ()) -> dict[str, tuple[float, int]]:
-    """For each ability on a map/side: the median 'same-spot share' across all players in the league.
-
-    Some utility is *always* placed the same way (e.g. a Viper wall lineup), so a 70-of-71 habit is only
-    worth a coach's time if it is more predictable than other players of that agent. Returns
-    {ability: (median share, number of players)} over players with at least MIN_SAMPLE rounds on the agent.
-
-    Slow (it clusters every player's casts), so results are saved under the gitignored cache folder and
-    reused; `python -m opscope.analytics.insights --warm` precomputes every map and side.
-    """
+def _habit_shares_path(map_name: str, side: str, cohort: str):
     from opscope.analytics.utility import SPOT_RADIUS_CM
-    tag = "+".join(sorted(cohorts)) or "all"
-    path = cache_dir() / "baselines" / f"habits_{map_name}_{side}_{tag}_r{SPOT_RADIUS_CM}_n{MIN_SAMPLE}.json"
-    if path.exists():
-        return {a: (v[0], v[1]) for a, v in json.loads(path.read_text()).items()}
-    rates = _compute_habit_rates(map_name, side, cohorts)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(rates))
-    return rates
+    return cache_dir() / "baselines" / f"habit_shares_{map_name}_{side}_{cohort}_r{SPOT_RADIUS_CM}_n{MIN_SAMPLE}.json"
 
 
-def _compute_habit_rates(map_name: str, side: str, cohorts: tuple[str, ...] = ()) -> dict[str, tuple[float, int]]:
+@cache
+def player_habit_shares(map_name: str, side: str, cohort: str,
+                        patches: tuple[str, ...] = (), events: tuple[str, ...] = ()) -> pd.DataFrame:
+    """Every player's 'same-spot share' per ability on one map/side in one season (cohort).
+
+    One row per (ability, player): `share` = rounds in their most-used spot / rounds on that agent. Players need
+    MIN_SAMPLE rounds on the agent. Slow (it clusters every player's casts), so the unfiltered version is saved
+    under the gitignored cache folder; patch/event-filtered versions are computed on demand and kept in memory.
+    """
+    path = _habit_shares_path(map_name, side, cohort)
+    if not patches and not events and path.exists():
+        return pd.DataFrame(json.loads(path.read_text()), columns=["ability", "player_id", "team_id", "share"])
+    df = _compute_habit_shares(map_name, side, cohort, patches, events)
+    if not patches and not events:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(df.values.tolist()))
+    return df
+
+
+def _compute_habit_shares(map_name: str, side: str, cohort: str, patches=(), events=()) -> pd.DataFrame:
     from opscope.analytics.utility import repeat_spots
     d = load()
     tr = team_rounds()
-    sel = (tr["map"] == map_name) & (tr["side"] == side)
-    if cohorts:
-        sel &= tr["cohort"].isin(cohorts)
+    sel = (tr["map"] == map_name) & (tr["side"] == side) & (tr["cohort"] == cohort)
+    if patches:
+        sel &= tr["patch"].isin(patches)
+    if events:
+        sel &= tr["event"].isin(events)
     rounds = tr[sel][["game_id", "round_num", "team_id"]]
     c = d.casts[(d.casts["map"] == map_name) & (d.casts["side"] == side) & d.casts["phase"].isin(["buy", "live"])]
     c = c.merge(rounds, on=["game_id", "round_num", "team_id"])
     lo = d.loadouts.merge(rounds, on=["game_id", "round_num", "team_id"])
     on_agent = lo.groupby(["player_id", "agent"]).size()
-    shares: dict[str, list[float]] = {}
+    team_of = lo.drop_duplicates("player_id").set_index("player_id")["team_id"]
+    rows = []
     for (pid, agent, ability), g in c.groupby(["player_id", "agent", "ability"]):
         n = int(on_agent.get((pid, agent), 0))
         if n < MIN_SAMPLE:
             continue
         spots = repeat_spots(g.reset_index(drop=True), max_spots=1)
-        shares.setdefault(ability, []).append(spots[0]["rounds"] / n if spots else 0.0)
-    return {a: (float(np.median(v)), len(v)) for a, v in shares.items()}
+        rows.append([str(ability), str(pid), str(team_of.get(pid, "")), spots[0]["rounds"] / n if spots else 0.0])
+    return pd.DataFrame(rows, columns=["ability", "player_id", "team_id", "share"])
+
+
+def league_habit_rate(map_name: str, side: str, ability: str, team_weights: dict[str, int], exclude_team: str,
+                      patches: tuple[str, ...] = (), events: tuple[str, ...] = ()) -> tuple[float | None, int]:
+    """The typical *other* player's same-spot share for an ability, season-matched.
+
+    Per season the team played (weighted by its rounds there): the median share of players on other teams
+    (at least 3 of them). Returns (share, players compared) or (None, 0) when no fair comparison exists.
+    """
+    acc = total = 0.0
+    players = 0
+    for cohort, w in team_weights.items():
+        shares = player_habit_shares(map_name, side, cohort, patches, events)
+        others = shares[(shares["ability"] == ability) & (shares["team_id"] != exclude_team)]["share"]
+        if len(others) < 3:
+            continue
+        acc += w * float(np.median(others))
+        total += w
+        players += len(others)
+    return (acc / total, players) if total else (None, 0)
 
 
 def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
@@ -239,18 +263,18 @@ def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
         rep = utility_report(UtilityScope(team_id=s.team_id, side=side, maps=s.maps, opponents=s.opponents,
                                           patches=s.patches, events=s.events,
                                           classes=("trap", "recon", "smoke", "flash", "stall")))
-        cohorts = tuple(sorted(rep.rounds["cohort"].dropna().unique()))
-        who_lg = cohort_label(cohorts)
+        who_lg = peer_group(rep.rounds["cohort"].dropna().unique())
         for m in rep.casts["map"].dropna().unique():
             h = rep.habits(m, max_per_ability=1)
             if h.empty:
                 continue
             h = h[(h["rounds_on_agent"] >= MIN_SAMPLE) & (h["share"] >= min_share)]
-            baseline = league_habit_rates(m, side, cohorts) if not h.empty else {}
+            weights = rep.rounds[rep.rounds["map"] == m]["cohort"].value_counts().to_dict()
             for _, row in h.iterrows():
                 k, n = int(row["rounds"]), int(row["rounds_on_agent"])
-                lg_share, lg_players = baseline.get(row["ability"], (None, 0))
-                if lg_share is None or lg_players < 3:
+                lg_share, lg_players = league_habit_rate(m, side, row["ability"], weights, s.team_id,
+                                                         s.patches, s.events)
+                if lg_share is None:
                     continue  # no fair comparison
                 sc = surprise(k, n, lg_share)
                 if sc <= 0 or k / n <= lg_share:
@@ -315,7 +339,7 @@ def warm() -> None:
     for cohort in sorted(g["cohort"].dropna().unique()):
         for m in sorted(g.loc[g["cohort"] == cohort, "map"].dropna().unique()):
             for side in ("defender", "attacker"):
-                league_habit_rates(m, side, (cohort,))
+                player_habit_shares(m, side, cohort)
     from opscope.analytics.landing import landing_model
     landing_model()
     print(f"Baselines ready for {len(maps)} maps in {time.time() - started:.0f}s")

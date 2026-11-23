@@ -8,7 +8,7 @@ from opscope.analytics.insights import map_pool, plant_sites, team_insights
 from opscope.analytics.operator import Scope, _filter_rounds, league_scope, team_rounds
 from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
-from opscope.load import CLOUD9_TEAMS, cohort_label
+from opscope.load import CLOUD9_TEAMS, cohort_label, peer_group
 from opscope.ui.cards import insight_card, stat_card, suggestion_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_spots, base_map
@@ -39,7 +39,7 @@ if roster:
     st.markdown(f"**Roster as of their last match in the data** ({short_event(roster.event)}, {roster.last_match}): "
                 f"{', '.join(roster.names)}.{note}")
 _cohorts = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None))["cohort"].dropna().unique()
-st.caption(f"Tendencies that stand out from other {cohort_label(_cohorts)} teams (same tier and season), with the "
+st.caption(f"Tendencies that stand out from other {peer_group(_cohorts)} teams (each season compared with itself), with the "
            f"sample behind each one. Covers both sides; the Side filter applies to the profiler pages.")
 
 pool = map_pool(scope)
@@ -115,7 +115,7 @@ tr = _filter_rounds(team_rounds(), Scope(team_id=tid, side="attacker", maps=(map
                                          patches=f["patches"], events=f["events"]))
 lg_s = league_scope(Scope(team_id=tid, side="attacker", maps=(map_name,), patches=f["patches"], events=f["events"]), tr)
 lg = _filter_rounds(team_rounds(), lg_s)
-lg_name = f"Other {cohort_label(lg_s.cohorts)} teams"
+lg_name = f"Other {cohort_label(lg_s.cohorts)} teams' plants"
 plants = plant_sites()
 keys = ["game_id", "round_num"]
 team_pl = tr.merge(plants[keys + ["site"]], on=keys)

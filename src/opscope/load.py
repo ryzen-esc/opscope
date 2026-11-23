@@ -17,6 +17,16 @@ CLOUD9_TEAMS = {"79": "Cloud9 (VCT 2025)", "3429": "Cloud9 GC (2026)"}
 TIER_NAMES = {"vct": "VCT", "gc": "Game Changers"}
 
 
+def peer_group(cohorts) -> str:
+    """How to name the comparison group in a sentence: "VCT 2025", or "same-season Game Changers" when the team
+    spans several seasons (each season is then compared separately and weighted by the team's rounds)."""
+    cohorts = sorted(set(cohorts))
+    if len(cohorts) <= 1:
+        return cohort_label(cohorts)
+    tiers = sorted({c.split("-")[0] for c in cohorts})
+    return "same-season " + " + ".join(TIER_NAMES.get(t, t) for t in tiers)
+
+
 def cohort_label(cohorts) -> str:
     """('vct-2025',) -> 'VCT 2025'; ('gc-2025', 'gc-2026') -> 'Game Changers 2025–2026'."""
     cohorts = sorted(set(cohorts))

@@ -313,3 +313,42 @@ def test_supplement_skips_casts_not_in_grid_and_handles_quality_flags():
     assert gap["x"] == 20 and gap["pos_source"] == "supplement"
     assert none["x"] == 1.0 and none["pos_source"] == "grid" and none["quality"] == "missing_both"
     assert unmatched["pos_source"] == "grid" and unmatched["quality"] is None
+
+
+def test_restart_under_the_same_game_id_keeps_the_replay():
+    """A cancelled map start drops that attempt; a restart reusing the same id must survive."""
+    t0 = BASE_TIME
+    game = make_game("g-same", [make_team("A", "attacker", [make_player("pa", "Alpha", items=["operator"])]),
+                                make_team("B", "defender", [make_player("pb", "Bravo")])])
+    env = [series_started_game("g-same", t0)]
+    _round(env, game, "g-same", 1, t0 + timedelta(seconds=1), kill_id="K-first")
+    env.append((env[-1][0], {"type": "series-!started-game", "action": "!started", "actor": {}, "target": {"id": "g-same"}}))
+    env.append(series_started_game("g-same", t0 + timedelta(seconds=300)))
+    _round(env, game, "g-same", 1, t0 + timedelta(seconds=301), kill_id="K-replay")
+    rows, report = parse_envelopes("s8", env)
+    assert [e["event_id"] for e in rows["engagements"]] == ["K-replay"]
+    assert len(rows["rounds"]) == 1 and len(rows["games"]) == 1
+    assert report["restarted_same_game_id"] == 1
+
+
+def test_out_of_order_undo_does_not_rewind_other_games():
+    """Undoing an old event of game 1 must not reset game 2's current round."""
+    t0 = BASE_TIME
+    g1 = make_game("g1", [make_team("A", "attacker", [make_player("pa", "Alpha")]), make_team("B", "defender", [make_player("pb", "Bravo")])])
+    g2 = make_game("g2", [make_team("A", "attacker", [make_player("pa", "Alpha")]), make_team("B", "defender", [make_player("pb", "Bravo")])])
+    env = [series_started_game("g1", t0)]
+    _round(env, g1, "g1", 1, t0 + timedelta(seconds=1), kill_id="K1")
+    env.append(series_started_game("g2", t0 + timedelta(seconds=100)))
+    _round(env, g2, "g2", 1, t0 + timedelta(seconds=101), finish=False)
+    # A late correction of game 1's kill (not the newest event)...
+    env.append(delta_event("player-!killed-player", game_id="g1", occurred_at=t0 + timedelta(seconds=140),
+                           actor={"id": "pa"}, target={"id": "pb"}, action="!killed"))
+    # ...then game 2 continues: this kill must still land in g2 round 1
+    env.append(delta_event("player-killed-player", game_id="g2", occurred_at=t0 + timedelta(seconds=150), event_id="K2",
+                           actor={"id": "pa", "state": {"teamId": "A", "side": "attacker", "game": {"position": {"x": 0, "y": 0}}},
+                                  "stateDelta": {"round": {"weaponKills": {"vandal": 1}}}},
+                           target={"id": "pb", "state": {"teamId": "B", "side": "defender", "game": {"position": {"x": 1, "y": 1}}}}))
+    rows, report = parse_envelopes("s9", env)
+    kills = {e["event_id"]: (e["game_id"], e["round_num"]) for e in rows["engagements"]}
+    assert "K1" not in kills and kills["K2"] == ("g2", 1)
+    assert report["rollback_out_of_order"] == 1

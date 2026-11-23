@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from opscope.analytics.stats import typical_rate
-from opscope.load import Dataset, cohort_label, load
+from opscope.load import Dataset, load, peer_group
 from opscope.maps import aggression
 
 TIME_BUCKETS = [(-1e9, 20, "0–20s"), (20, 40, "20–40s"), (40, 60, "40–60s"), (60, 1e9, "60s+")]
@@ -84,6 +84,32 @@ class Scope:
         """Same map/side/patch/event/cohort context, but every team."""
         return Scope(team_id="", weapon=self.weapon, side=self.side, maps=self.maps,
                      patches=self.patches, events=self.events, cohorts=self.cohorts)
+
+
+def season_weighted_rate(team_rows: pd.DataFrame, league_rows: pd.DataFrame, flag: str,
+                         min_rounds: int | None = None) -> tuple[float, str]:
+    """Comparison rate for a team whose rounds may span several seasons (cohorts).
+
+    Each season is compared only with that season: the typical other team's rate is found per cohort, then
+    weighted by how many of the team's rows fall in that cohort. `league_rows` must hold other teams' rows with
+    `cohort`, `team_id` and a boolean `flag` column.
+    """
+    weights = team_rows["cohort"].value_counts()
+    acc = total = 0.0
+    methods = set()
+    for cohort, w in weights.items():
+        lg = league_rows[league_rows["cohort"] == cohort]
+        if lg.empty:
+            continue
+        per_team = lg.groupby("team_id")[flag].agg(["sum", "size"])
+        kwargs = {"min_rounds": min_rounds} if min_rounds is not None else {}
+        rate, method = typical_rate(per_team["sum"], per_team["size"], **kwargs)
+        acc += w * rate
+        total += w
+        methods.add(method)
+    if not total:
+        return 0.0, "all rounds"
+    return acc / total, ("typical team" if methods == {"typical team"} else "all rounds")
 
 
 def league_scope(s: Scope, team_rows: pd.DataFrame, **overrides) -> Scope:
@@ -163,10 +189,16 @@ class OperatorReport:
                 "without": (int(without["won"].sum()), len(without))}
 
     def first_shot_buckets(self) -> pd.DataFrame:
-        """When the gun first fires in a round (rounds where it fired at all)."""
-        if self.shots.empty:
+        """When the gun first fires, in rounds where the team had it at the end of the buy phase.
+
+        Pickup rounds (someone fired a gun the team didn't buy) are excluded, so the count is out of the same
+        gun rounds the caption names.
+        """
+        gun_rounds = self.rounds.loc[self.rounds["has_gun"], ["game_id", "round_num"]]
+        shots = self.shots.merge(gun_rounds, on=["game_id", "round_num"]) if not self.shots.empty else self.shots
+        if shots.empty:
             return pd.DataFrame(columns=["bucket", "rounds"])
-        first = self.shots.groupby(["game_id", "round_num"])["t"].min()
+        first = shots.groupby(["game_id", "round_num"])["t"].min()
         b = time_bucket(first).value_counts().reindex([x[2] for x in TIME_BUCKETS], fill_value=0)
         return b.rename_axis("bucket").reset_index(name="rounds")
 
@@ -253,12 +285,11 @@ def operator_report(s: Scope) -> OperatorReport:
     lg_keys = set(zip(lg_h["game_id"], lg_h["round_num"], lg_h["team_id"]))
     lg_flag = lg_tr.assign(has=np.array([k in lg_keys for k in zip(lg_tr["game_id"], lg_tr["round_num"], lg_tr["team_id"])],
                                         dtype=bool))
-    per_team = lg_flag.groupby("team_id")["has"].agg(["sum", "size"])
-    lg_rate, lg_method = typical_rate(per_team["sum"], per_team["size"]) if len(per_team) else (0.0, "all rounds")
+    lg_rate, lg_method = season_weighted_rate(tr, lg_flag, "has")
     lg_setups = _setups(_holder_positions(lg_h[lg_h["team_id"] != s.team_id])) if s.maps else pd.DataFrame()
     lg_aggr = lg_setups["aggression"].dropna().to_numpy(float) if not lg_setups.empty else np.array([])
 
     pos = _holder_positions(h)
     return OperatorReport(scope=s, rounds=tr, holders=h, positions=pos, setups=_setups(pos), sightlines=sight,
                           shots=e, pickups=pickups, league_share=lg_share, league_aggression=lg_aggr,
-                          league_label=cohort_label(lg.cohorts), league_rate=lg_rate, league_method=lg_method)
+                          league_label=peer_group(lg.cohorts), league_rate=lg_rate, league_method=lg_method)
