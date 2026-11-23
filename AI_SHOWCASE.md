@@ -49,7 +49,7 @@ Claude Code told me turrets deal no damage. I knew that was wrong and checked a 
 
 - **No data in the repo:** the data stays in its own clone, outside the project. The cache and every derived table are gitignored, and staged files are checked before every commit.
 - **Synthetic tests:** tests and Junie prompts use **synthetic** events only; Junie's guidelines (`.junie/guidelines.md`) forbid real data in tests or prompts.
-- **Opt-outs:** JetBrains AI's detailed data collection is off, as the data license requires for AI tools.
+- **Opt-outs:** training on my inputs is turned off for both AI tools that saw the code (JetBrains AI: detailed data collection off; Claude: privacy setting off), as the data license requires.
 - **Community data:** only aggregate positions (site centres) and community callouts are committed. Both contain no match data.
 
 ## What I'd tell another team
