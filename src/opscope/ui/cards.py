@@ -53,5 +53,22 @@ def inject_css() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
 
 
+CATEGORY_COLORS = {"Operator": "#F25F5C", "Utility": "#00AEEF", "Attack": "#F5B700"}
+
+
+def insight_card(ins) -> None:
+    """A ranked scouting insight: category chip, map/side, sentence, sample and league context."""
+    color = CATEGORY_COLORS.get(ins.category, "#8b9bab")
+    side = {"attacker": "attack", "defender": "defense"}.get(ins.side, ins.side)
+    league = f" · league {ins.league_rate:.0%}" if ins.league_rate is not None else ""
+    st.markdown(
+        f'<div class="ops-card" style="border-left:4px solid {color}">'
+        f'<div class="ops-title"><span style="color:{color}">{ins.category}</span> · {ins.map.title()} · {side}</div>'
+        f'<div style="color:#dce6ef;margin:6px 0 4px 0;line-height:1.4">{ins.text}</div>'
+        f'<div class="ops-ctx">{ins.sample}{league}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def insight(text: str) -> None:
     st.markdown(f'<div class="ops-insight">{text}</div>', unsafe_allow_html=True)

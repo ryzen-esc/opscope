@@ -1,0 +1,99 @@
+# Bomb-site centres per map (aggregate of planter positions; no match data).
+# Rename 'Site N' to the real callout (A/B/C). Positions are in game units (cm).
+abyss:
+- name: Site 1
+  x: -5335
+  y: -1107
+- name: Site 2
+  x: 4650
+  y: -485
+ascent:
+- name: Site 1
+  x: -3619
+  y: -7266
+- name: Site 2
+  x: 5677
+  y: -7039
+bind:
+- name: Site 1
+  x: 10465
+  y: 2025
+- name: Site 2
+  x: 11268
+  y: -4971
+breeze:
+- name: Site 1
+  x: 5072
+  y: 6497
+- name: Site 2
+  x: 7490
+  y: -4732
+corrode:
+- name: Site 1
+  x: -3830
+  y: -1696
+- name: Site 2
+  x: 4103
+  y: -2278
+fracture:
+- name: Site 1
+  x: 7984
+  y: -5668
+- name: Site 2
+  x: 8302
+  y: 3780
+haven:
+- name: Site 1
+  x: -2525
+  y: -9198
+- name: Site 2
+  x: 1824
+  y: -9070
+- name: Site 3
+  x: 6473
+  y: -9359
+icebox:
+- name: Site 1
+  x: -7304
+  y: 3427
+- name: Site 2
+  x: 1428
+  y: 1447
+lotus:
+- name: Site 1
+  x: 6229
+  y: -4820
+- name: Site 2
+  x: 6691
+  y: 222
+- name: Site 3
+  x: 7702
+  y: 5980
+pearl:
+- name: Site 1
+  x: 6551
+  y: -4114
+- name: Site 2
+  x: 7512
+  y: 4534
+split:
+- name: Site 1
+  x: -2196
+  y: -6716
+- name: Site 2
+  x: 7491
+  y: -7130
+summit:
+- name: Site 1
+  x: 7332
+  y: 11268
+- name: Site 2
+  x: 8794
+  y: 1297
+sunset:
+- name: Site 1
+  x: 873
+  y: -4629
+- name: Site 2
+  x: 2112
+  y: 3905
