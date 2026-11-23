@@ -109,6 +109,16 @@ def add_points_by_category(fig: go.Figure, df: pd.DataFrame, category: str, hove
     return colors
 
 
+def add_throw_lines(fig: go.Figure, df: pd.DataFrame, color: str = "rgba(220,230,240,0.35)") -> None:
+    """Faint line from where each utility was cast (cast_x/cast_y) to where it is estimated to land (x/y)."""
+    if df.empty:
+        return
+    xs = np.column_stack([df["cast_x"], df["x"], np.full(len(df), np.nan)]).ravel()
+    ys = np.column_stack([df["cast_y"], df["y"], np.full(len(df), np.nan)]).ravel()
+    fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", line=dict(color=color, width=1),
+                             hoverinfo="skip", name="thrown from"))
+
+
 def add_spots(fig: go.Figure, spots: pd.DataFrame, radius_cm: float, label_col: str = "label") -> None:
     """Numbered rings for habitual spots."""
     for _, s in spots.iterrows():

@@ -278,6 +278,8 @@ def warm() -> None:
     for m in maps:
         for side in ("defender", "attacker"):
             league_habit_rates(m, side)
+    from opscope.analytics.landing import landing_model
+    landing_model()
     print(f"Baselines ready for {len(maps)} maps in {time.time() - started:.0f}s")
 
 

@@ -3,6 +3,7 @@ import json
 
 import streamlit as st
 
+from opscope.analytics.landing import landing_model
 from opscope.analytics.stats import MIN_SAMPLE
 from opscope.analytics.utility import SPOT_RADIUS_CM
 from opscope.ingest.build import cache_dir
@@ -67,6 +68,31 @@ with st.expander("Utility profiler"):
   habit only becomes a tendency when it is more predictable than the median player with the same ability on
   the same map and side.
 """)
+with st.expander("Estimated landing spots"):
+    try:
+        lm = landing_model()
+        v = lm["validation"]
+        st.markdown(f"""
+GRID doesn't record where utility lands, but **damaging** utility leaves evidence: the players it hurts were
+standing where it landed.
+
+1. Each molly, nanoswarm, shock dart or similar cast is paired with the damage that same player later did with
+   that ability in the round ({lm['pairs']:,} casts). The victims' median position stands in for the landing.
+2. Utility lands along the aim (the typical sideways miss is 2–3 m), so the model is just *how far along the aim
+   this ability lands for this aim angle* (the median, in 5° bins).
+3. Checked on {v['test_series']} matches held out from fitting ({v['test_casts']:,} casts): the typical miss is
+   **{v['median_model_m']} m**, against **{v['median_cast_m']} m** for the cast spot and {v['median_fixed_m']} m for
+   a fixed distance. The victims' spread inside the area limits how small this check can go.
+
+Estimates are shown only for the {len(lm['model'])} abilities this improves. Smokes, alarmbots, cameras and the like
+deal no damage, so they can't be checked, and they stay at the cast spot.
+""")
+        st.dataframe(
+            [{"Ability": a.replace("-", " ").title(), "Test casts": s["n"], "Miss with cast spot (m)": s["cast"],
+              "Miss with estimate (m)": s["model"]} for a, s in sorted(v["abilities"].items())],
+            hide_index=True, use_container_width=True)
+    except Exception as exc:  # missing cache etc.: the rest of the page still works
+        st.caption(f"Landing model not available yet ({exc}).")
 with st.expander("Sites and named areas"):
     st.markdown(f"""
 - **Bomb sites** are found by clustering about 29,000 plant positions; sites come out 3–7 m wide.
@@ -87,7 +113,7 @@ with st.expander("Game plan and predictability check"):
 
 st.header("Limits worth knowing")
 st.markdown("""
-- **No landing spots** for utility, and **no continuous movement**: positions exist only at events.
+- **Landing spots are estimates**, and only for damaging utility. There is **no continuous movement**: positions exist only at events.
 - **Rosters change.** Cloud9 (VCT Americas 2025) and Cloud9 GC (Game Changers NA 2026) are separate teams here.
 - **Buy types** are by total team loadout: eco under 6,000; full buy at 18,000 and up; rounds 1 and 13 are pistols.
 - **The data covers 2025–2026 events** in the hackathon set. Matches GRID didn't record aren't included.

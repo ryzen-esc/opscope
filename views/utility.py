@@ -1,12 +1,15 @@
 """Utility profiler page: where and when a team casts its abilities, and the spots they repeat."""
+from dataclasses import replace
+
 import plotly.express as px
 import streamlit as st
 
+from opscope.analytics.landing import add_landings, landing_model
 from opscope.analytics.stats import MIN_SAMPLE, of
 from opscope.analytics.utility import SPOT_RADIUS_CM, UtilityScope, utility_report
 from opscope.ui.cards import insight, stat_card
 from opscope.ui.filters import sidebar, team_name
-from opscope.ui.minimap import add_points_by_category, add_spots, base_map
+from opscope.ui.minimap import add_points_by_category, add_spots, add_throw_lines, base_map
 
 CLASSES = {"Traps & setups": ("trap",), "Recon": ("recon",), "Smokes": ("smoke",), "Stalls": ("stall",),
            "Flashes": ("flash",), "All": ()}
@@ -52,7 +55,21 @@ else:
     map_name = st.selectbox("Map", list(played.index), format_func=lambda m: f"{m.title()} ({played[m]} {unit})",
                             key="util_map")
 map_rounds = int((r.rounds["map"] == map_name).sum())
-casts = r.casts[r.casts["map"] == map_name]
+
+# ---- cast spot vs estimated landing ------------------------------------------------------------
+all_casts = add_landings(r.casts)
+modeled = all_casts["land_x"].notna() & (all_casts["map"] == map_name)
+VIEWS = ["Where they stand", "Where it lands (est.)"]
+view = (st.segmented_control("Show", VIEWS, default=VIEWS[0], key="util_view") or VIEWS[0]) if modeled.any() else VIEWS[0]
+landing_view = view == VIEWS[1]
+if landing_view:
+    # Damaging thrown utility moves to its estimated landing; everything else stays at the cast spot.
+    has = all_casts["land_x"].notna()
+    all_casts = all_casts.assign(cast_x=all_casts["x"], cast_y=all_casts["y"],
+                                 x=all_casts["land_x"].where(has, all_casts["x"]),
+                                 y=all_casts["land_y"].where(has, all_casts["y"]))
+    r = replace(r, casts=all_casts)  # habits below are then found on landing spots
+casts = all_casts[all_casts["map"] == map_name]
 
 agents = sorted(casts["agent"].dropna().unique())
 # Keyed by class + map so the selection resets when those change (a stale selection would hide agents).
@@ -97,23 +114,37 @@ with k3:
 left, right = st.columns([3, 2], gap="large")
 with left:
     st.subheader("Where it goes")
-    default_arrows = cls_label in ("Smokes", "Flashes", "Recon", "Stalls")
+    default_arrows = landing_view or cls_label in ("Smokes", "Flashes", "Recon", "Stalls")
     t1, t2 = st.columns(2)
     with t1:
-        arrows = st.toggle("Aim direction", value=default_arrows, help="Line from the caster in the direction they were aiming.")
+        arrows = st.toggle("Throw lines" if landing_view else "Aim direction", value=default_arrows,
+                           help="From the caster to the estimated landing" if landing_view
+                           else "Line from the caster in the direction they were aiming.")
     with t2:
         show_spots = st.toggle("Habit spots", value=True)
     fig = base_map(map_name)
     if not casts.empty:
         tmp = casts.assign(name=casts["player_name"], ability_name=casts["ability"].map(pretty),
                            time=casts["t"].round(0).astype("Int64").astype(str) + "s")
-        add_points_by_category(fig, tmp, "ability_name", ["name", "ability_name", "phase", "time"], arrows=arrows)
+        if landing_view and arrows:
+            add_throw_lines(fig, tmp[tmp["land_x"].notna()])
+        add_points_by_category(fig, tmp, "ability_name", ["name", "ability_name", "phase", "time"],
+                               arrows=arrows and not landing_view)
     if show_spots and not strong.empty:
         add_spots(fig, strong, SPOT_RADIUS_CM)
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
-    st.caption("Dots are where the player stood when casting (from the ability supplement; ±1 m, or a few metres in "
-               "VCT Americas 2025, which was recorded at 1 Hz). GRID doesn't record where utility lands, so thrown "
-               "utility shows the aim direction instead. Rings mark spots reused in many rounds.")
+    if landing_view:
+        val = landing_model()["validation"]
+        n_est = int(casts["land_x"].notna().sum())
+        st.caption(f"Estimated landings for damaging utility ({n_est} of {len(casts)} casts here): mollies, nanoswarms, "
+                   f"shock darts and similar. They're placed along the aim, at the distance that ability usually travels "
+                   f"for that aim angle, learned from who it later damaged. On held-out matches the typical miss is "
+                   f"{val['median_model_m']} m, against {val['median_cast_m']} m for the cast spot. Other utility stays "
+                   f"at the cast spot.")
+    else:
+        st.caption("Dots are where the player stood when casting, from the ability supplement (in VCT Americas 2025, "
+                   "recorded once a second, a moving player can be a few metres off). GRID doesn't record where utility "
+                   "lands, so thrown utility shows the aim direction instead. Rings mark spots reused in many rounds.")
 
 with right:
     st.subheader("Who uses what")
