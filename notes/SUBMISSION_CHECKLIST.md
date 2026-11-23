@@ -7,7 +7,7 @@
   - `utility.png`: Utility profiler, Lotus defense, landing view
 - [ ] **Demo video** (under 3 min) following `notes/DEMO_SCRIPT.md`. Upload to YouTube as **Public**, and paste the link into Devpost.
 - [ ] **JetBrains tools:** decide what else to use them for (e.g. AI Assistant commit messages, a docs draft) and update the "JetBrains tools" lists in `README.md` and `notes/DEVPOST.md`. Mention JetBrains Air only if it's actually used.
-- [ ] **AI training opt-out:** the data license says to opt out of training on your inputs wherever a tool allows it. JetBrains AI is done. Also check the privacy settings of the Claude account used for Claude Code (claude.ai → Settings → Privacy).
+- [x] **AI training opt-out:** done for both JetBrains AI (detailed data collection off) and the Claude account used for Claude Code (claude.ai → Settings → Privacy).
 - [x] **GitHub repo public:** https://github.com/ryzen-esc/opscope
 - [ ] Fill in Devpost from `notes/DEVPOST.md` (repo link above).
 
