@@ -1,7 +1,14 @@
-"""OpScope dashboard (placeholder). Run with: uv run streamlit run app.py"""
+"""OpScope dashboard. Run with: uv run streamlit run app.py"""
 import streamlit as st
 
-st.set_page_config(page_title="OpScope", layout="wide")
-st.title("OpScope")
-st.caption("VALORANT Operator & utility scouting for Cloud9")
-st.info("Coming soon: Operator profiler and utility heatmaps.")
+from opscope.ui.cards import inject_css
+
+st.set_page_config(page_title="OpScope", page_icon="🎯", layout="wide")
+inject_css()
+
+pages = [
+    st.Page("views/operator.py", title="Operator profiler", icon=":material/my_location:", default=True),
+]
+st.sidebar.markdown("## OpScope")
+st.sidebar.caption("VALORANT scouting for Cloud9")
+st.navigation(pages).run()

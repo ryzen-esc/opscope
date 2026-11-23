@@ -37,8 +37,17 @@ Technological implementation (incl. depth of JetBrains tool use), Design (comple
 Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py` has the streaming helpers); `explore.py` is the data sanity check; `app.py` is the Streamlit entry point.
 
 ## Status (Nov 23, 2026)
-- Scaffold created; git initialized (no commits yet); `uv sync` done; GRID data cloned (857 series, ~1 GB compressed); `explore.py` runs.
-- Next: map the event types needed for Operator and ability positions, then build the Operator profiler first.
+- Roadmap: `notes/PLAN.md` (milestones M1–M6).
+- **M1 (ingest) done except tests:** `uv run python -m opscope.ingest.build` turns all 857 series into `cache/v1/{games,rounds,loadouts,engagements,casts,snapshots}.parquet` in ~4 min; `opscope.load.load()` returns them as DataFrames. All round counts match `meta/games.csv`.
+- Ingest facts learned the hard way:
+  - GRID rollbacks (`!` actions) are common (13k in VAL). They undo events newest-first with new ids; `feed.py` keeps an undo stack keyed by (type, actor id, target id).
+  - Restored games contain bookkeeping rounds; `rounds.played` filters them out.
+  - Positions on GRID events are periodic samples (~1–4 m error). Supplement positions are better for casts.
+  - Side per round comes from the round segment at freeze end, not from `games.csv`.
+- Ability classes live in `taxonomy.py` and are applied at load time (no rebuild needed).- **M2 (Operator profiler) first version works:** `analytics/operator.py` (Scope → OperatorReport), `maps.py` (data-drawn backdrop, spawns, aggression), `ui/{minimap,cards,filters}.py`, page `views/operator.py`, wired in `app.py` via `st.navigation`. Theme in `.streamlit/config.toml`.
+  - Real findings: OXY holds C9's Op in 93 of 96 defense Op rounds; C9 Ops 30 of 80 Haven defense rounds but only 2 of 134 on Lotus.
+  - Known weakness: "setup spot" = first live position seen for the holder (events only), often late in the round. The plant snapshot isn't used yet.
+- Still open: synthetic-fixture tests for `ingest/feed.py` (a Junie task); M2 polish (setup heat/density, plant-snapshot positions, opponent filter check, Odin view); then M3 utility heatmaps.
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.

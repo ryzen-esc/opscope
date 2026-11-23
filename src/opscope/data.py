@@ -32,9 +32,38 @@ def series_file(row: dict, game: str = "val") -> Path:
     raise FileNotFoundError(name)
 
 
+def iter_jsonl(path: Path) -> Iterator[dict]:
+    """Stream every JSON line from a .jsonl.zst file (GRID envelopes or supplement casts)."""
+    with zstd.open(path, "rt", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                yield json.loads(line)
+
+
+def iter_envelopes(path: Path) -> Iterator[tuple[str, dict]]:
+    """Yield (occurredAt, event) for every event, keeping the envelope's UTC timestamp."""
+    for envelope in iter_jsonl(path):
+        occurred_at = envelope.get("occurredAt", "")
+        for event in envelope.get("events", []):
+            yield occurred_at, event
+
+
 def iter_events(path: Path) -> Iterator[dict]:
     """Stream every event from a .jsonl.zst feed."""
-    with zstd.open(path, "rt") as f:
-        for line in f:
-            for event in json.loads(line).get("events", []):
-                yield event
+    for _, event in iter_envelopes(path):
+        yield event
+
+
+def supplement_file(row: dict) -> Path | None:
+    """Resolve the ability supplement path from a series.csv row, or None if there is none."""
+    name = row.get("ability_supplement") or ""
+    if not name:
+        return None
+    path = data_dir() / name
+    return path if path.exists() else None
+
+
+def load_meta(table: str, title: str = "val") -> list[dict]:
+    """Read a meta/*.csv lookup table, filtered to one title."""
+    with open(data_dir() / "meta" / f"{table}.csv", newline="", encoding="utf-8") as f:
+        return [r for r in csv.DictReader(f) if r.get("title") == title]
