@@ -9,17 +9,19 @@ Habits (repeat utility spots) have no league comparison; they rank by share and 
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from functools import cache
 
 import numpy as np
 import pandas as pd
 
-from opscope.analytics.operator import Scope, _filter_rounds, team_rounds
+from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, positions, team_rounds
 from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
 from opscope.analytics.utility import UtilityScope, utility_report
+from opscope.ingest.build import cache_dir
 from opscope.load import load
-from opscope.zones import assign_site, plant_positions
+from opscope.zones import assign_site, nearest_callout, plant_positions
 
 SIDE_WORD = {"attacker": "attack", "defender": "defense"}
 GUNS = {"operator": "Operator", "odin": "Odin"}
@@ -66,6 +68,23 @@ def plant_sites() -> pd.DataFrame:
 
 # ---- generators ------------------------------------------------------------------------------
 
+def early_area(holders: pd.DataFrame, map_name: str, window: float = SETUP_WINDOW) -> tuple[str | None, int, int]:
+    """Most common named area for the gun holder in the first `window` seconds: (area, rounds there, rounds seen)."""
+    keys = ["game_id", "round_num", "player_id"]
+    pos = positions()
+    early = holders[keys].merge(pos[(pos["t"] <= window)], on=keys)
+    if early.empty:
+        return None, 0, 0
+    early = early.assign(area=nearest_callout(map_name, early["x"], early["y"])).dropna(subset=["area"])
+    seen = early[["game_id", "round_num"]].drop_duplicates().shape[0]
+    if not seen:
+        return None, 0, 0
+    counts = early.drop_duplicates(["game_id", "round_num", "area"])["area"].value_counts()
+    if counts.iloc[0] < 3:
+        return None, 0, seen  # too thin to name a spot
+    return str(counts.index[0]), int(counts.iloc[0]), seen
+
+
 def gun_insights(s: Scope) -> list[Insight]:
     """Big-gun usage per map/side vs the league, and who carries it."""
     d = load()
@@ -75,7 +94,8 @@ def gun_insights(s: Scope) -> list[Insight]:
                                         patches=s.patches, events=s.events))
     out = []
     for weapon, label in GUNS.items():
-        lo = d.loadouts.loc[d.loadouts["primary_fe"] == weapon, ["game_id", "round_num", "team_id", "player_name", "agent"]]
+        lo = d.loadouts.loc[d.loadouts["primary_fe"] == weapon,
+                            ["game_id", "round_num", "team_id", "player_id", "player_name", "agent"]]
         has = lo[["game_id", "round_num", "team_id"]].drop_duplicates().assign(has=True)
 
         def flag(df: pd.DataFrame) -> pd.DataFrame:
@@ -98,18 +118,23 @@ def gun_insights(s: Scope) -> list[Insight]:
             more = pct(k, n) > lr
             holders = (lo.merge(t[t["has"] & (t["map"] == m) & (t["side"] == side)][["game_id", "round_num", "team_id"]],
                                 on=["game_id", "round_num", "team_id"]))
-            who = ""
+            who, tags = "", {"weapon": weapon, "label": label, "direction": "more" if more else "less"}
             if more and len(holders):
                 top = holders.groupby(["player_name", "agent"]).size().sort_values(ascending=False)
                 (pname, agent), cnt = top.index[0], int(top.iloc[0])
                 who = f" Usually <b>{pname}</b> on {agent.title()} ({cnt} of {k})."
+                tags.update(player=pname, agent=agent)
+                area, ak, an = early_area(holders, m)
+                if area:
+                    who += f" Early in the round it's most often seen near <b>{area}</b> ({of(ak, an, 'rounds seen')})."
+                    tags.update(area=area, area_k=ak, area_n=an)
             verb = "often" if more else "rarely"
             out.append(Insight(
                 category="Operator", map=m, side=side,
                 text=f"{verb.capitalize()} buy the <b>{label}</b> on {SIDE_WORD[side]} on <b>{m.title()}</b>: "
                      f"<b>{of(k, n, SIDE_WORD[side] + ' rounds')}</b> (league {lr:.0%}).{who}",
                 k=k, n=n, unit=f"{SIDE_WORD[side]} rounds", league=(lk, ln), score=sc + (0.05 if more else 0),
-                tags={"weapon": weapon, "direction": "more" if more else "less"}))
+                tags=tags))
     return out
 
 
@@ -154,7 +179,21 @@ def league_habit_rates(map_name: str, side: str) -> dict[str, tuple[float, int]]
     Some utility is *always* placed the same way (e.g. a Viper wall lineup), so a 70-of-71 habit is only
     worth a coach's time if it is more predictable than other players of that agent. Returns
     {ability: (median share, number of players)} over players with at least MIN_SAMPLE rounds on the agent.
+
+    Slow (it clusters every player's casts), so results are saved under the gitignored cache folder and
+    reused; `python -m opscope.analytics.insights --warm` precomputes every map and side.
     """
+    from opscope.analytics.utility import SPOT_RADIUS_CM
+    path = cache_dir() / "baselines" / f"habits_{map_name}_{side}_r{SPOT_RADIUS_CM}_n{MIN_SAMPLE}.json"
+    if path.exists():
+        return {a: (v[0], v[1]) for a, v in json.loads(path.read_text()).items()}
+    rates = _compute_habit_rates(map_name, side)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rates))
+    return rates
+
+
+def _compute_habit_rates(map_name: str, side: str) -> dict[str, tuple[float, int]]:
     from opscope.analytics.utility import repeat_spots
     d = load()
     tr = team_rounds()
@@ -229,3 +268,22 @@ def map_pool(s: Scope) -> pd.DataFrame:
         pool[f"{pre}_won"] = side[("sum", sd)] if ("sum", sd) in side.columns else 0
         pool[f"{pre}_n"] = side[("size", sd)] if ("size", sd) in side.columns else 0
     return pool.fillna(0).astype(int).reset_index().sort_values("games", ascending=False)
+
+
+def warm() -> None:
+    """Precompute the league habit baselines for every map and side (about a minute; saved to cache/)."""
+    import time
+    started = time.time()
+    maps = sorted(load().games["map"].dropna().unique())
+    for m in maps:
+        for side in ("defender", "attacker"):
+            league_habit_rates(m, side)
+    print(f"Baselines ready for {len(maps)} maps in {time.time() - started:.0f}s")
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="Scouting insights")
+    ap.add_argument("--warm", action="store_true", help="precompute league baselines so reports load fast")
+    if ap.parse_args().warm:
+        warm()

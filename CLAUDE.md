@@ -60,7 +60,9 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
   - `zones.py` + `sites.yaml`: bomb sites found by k-means on planter positions (2 per map, 3 on Haven/Lotus). Names (A/B/C) come from matching each centre to the nearest "Site" callout from valorant-api.com (`/v1/maps` → `callouts`). That API uses **the same x/y as GRID** (identity transform; all matches within 20 m, next site 40+ m away). The same callouts (A Main, Mid Courtyard, …) could name any position. The YAML holds only centres, so it's safe to commit.
   - The first report load for a team takes ~3–12 s (league habit baselines), then it's cached.
 - **Callouts:** `callouts.yaml` (346 named points on 16 maps, refreshed with `python -m opscope.zones --callouts`). `zones.nearest_callout(map, x, y)` names any position: within 8 m of a plant-derived site centre it's "A Site", else the nearest callout point (within 25 m). The letter is reliable; the exact area is a best guess near borders, because a callout is one point per area. Used in habit insights ("near B Main"), utility ring labels, report map labels, and Operator hover text plus an area summary.
-- Next: M5 (anti-strat suggestions + polish, e.g. precomputing the league baselines).
+- **M5 (anti-strat) works:** `analytics/antistrat.py` turns insights into suggestions. Opponent mode is "Game plan vs X", written from your side (their defense = your attack). Self-scout mode (C9 teams) is a "Predictability check". Rule-based; each suggestion cites its insight and sample. One suggestion per (map, side, category) so a single map can't fill the list. Gun insights now name where the gun sits early ("near B Site").
+- **Speed:** league habit baselines are saved to `cache/v1/baselines/*.json` (computed by `--warm`, or automatically at the end of `ingest.build`, which clears stale ones). A C9 report went from 12 s to about 2 s cold.
+- Next: M6 docs + demo. Possible M5 extras: landing-spot projection for short throws, a methodology page in the app, UI polish.
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.

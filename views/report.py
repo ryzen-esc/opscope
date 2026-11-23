@@ -3,11 +3,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from opscope.analytics.antistrat import game_plan
 from opscope.analytics.insights import map_pool, plant_sites, team_insights
 from opscope.analytics.operator import Scope, _filter_rounds, team_rounds
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
 from opscope.load import CLOUD9_TEAMS
-from opscope.ui.cards import insight_card, stat_card
+from opscope.ui.cards import insight_card, stat_card, suggestion_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_spots, base_map
 from opscope.zones import sites
@@ -49,10 +50,30 @@ with c3:
 with c4:
     stat_card("Defense rounds won", f"{pct(def_w, def_n):.0%}", of(def_w, def_n))
 
+# ---- game plan ------------------------------------------------------------------------------------
+items = insights_for(scope)
+self_scout = tid in CLOUD9_TEAMS
+plan = game_plan(items, self_scout=self_scout, limit=8)
+if self_scout:
+    st.subheader("Predictability check")
+    st.caption("What an opponent scouting this team would see: the habits most worth varying.")
+else:
+    st.subheader(f"Game plan vs {team}")
+    st.caption("Counters to this team's most unusual tendencies, written from your side. Each one cites its evidence; "
+               "treat them as prompts for prep, not orders.")
+if plan:
+    half = (len(plan) + 1) // 2
+    pl, pr = st.columns(2)
+    for col, chunk, start in ((pl, plan[:half], 1), (pr, plan[half:], half + 1)):
+        with col:
+            for n, sug in enumerate(chunk, start):
+                suggestion_card(sug, n)
+else:
+    st.info("Nothing stands out from the league strongly enough to plan around yet.")
+
 # ---- key tendencies -------------------------------------------------------------------------------
 st.subheader("Key tendencies")
 cat = st.segmented_control("Show", CATEGORIES, default="All", key="report_cat") or "All"
-items = insights_for(scope)
 shown = [i for i in items if cat == "All" or i.category == cat][:9]
 if not shown:
     st.info("Nothing in this category stands out from the league with enough rounds behind it.")

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import time
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -137,6 +138,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--series", action="append", help="only these series ids (repeatable)")
     ap.add_argument("--force", action="store_true", help="rebuild series that already have parts")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
+    ap.add_argument("--no-baselines", action="store_true", help="skip precomputing league baselines")
     args = ap.parse_args(argv)
 
     out = cache_dir()
@@ -179,6 +181,12 @@ def main(argv: list[str] | None = None) -> None:
     report_path.write_text(json.dumps(report, indent=2))
     print(json.dumps({k: report[k] for k in ("built_series", "table_rows", "seconds")}, indent=2))
     print(f"{len(failures)} failures, {len(report['mismatches'])} series with round-count mismatches")
+
+    # League baselines depend on the tables: drop stale ones and precompute fresh ones so reports load fast.
+    if results and not args.no_baselines:
+        shutil.rmtree(out / "baselines", ignore_errors=True)
+        from opscope.analytics.insights import warm
+        warm()
 
 
 if __name__ == "__main__":

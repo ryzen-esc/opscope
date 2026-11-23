@@ -70,5 +70,20 @@ def insight_card(ins) -> None:
     )
 
 
+def suggestion_card(s, number: int) -> None:
+    """An anti-strat suggestion with the evidence it came from."""
+    ins = s.evidence
+    color = CATEGORY_COLORS.get(ins.category, "#8b9bab")
+    st.markdown(
+        f'<div class="ops-card" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">'
+        f'<div style="font-size:1.4rem;font-weight:700;color:{color};min-width:1.6rem">{number}</div>'
+        f'<div><div style="color:#fff;font-weight:600;line-height:1.35">{s.headline}</div>'
+        f'<div style="color:#c9d3dd;margin-top:3px;line-height:1.4">{s.detail}</div>'
+        f'<div class="ops-ctx" style="margin-top:4px">Based on: {ins.category} · {ins.map.title()} · {ins.sample}</div>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def insight(text: str) -> None:
     st.markdown(f'<div class="ops-insight">{text}</div>', unsafe_allow_html=True)

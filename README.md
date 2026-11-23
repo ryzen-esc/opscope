@@ -14,7 +14,7 @@ VALORANT Operator & utility scouting for Cloud9 coaches. Built for the Cloud9 x 
 3. Copy `.env.example` to `.env` and set `STL_DATA_DIR` to that clone.
 4. Install dependencies: `uv sync`
 5. Check the data loads: `uv run python explore.py`
-6. Build the local cache (about 4 minutes on 10 cores; written to the gitignored `cache/` folder):
+6. Build the local cache (about 4 minutes on 10 cores, plus ~20 s to precompute league baselines; written to the gitignored `cache/` folder):
    `uv run python -m opscope.ingest.build`
 7. Run the dashboard: `uv run streamlit run app.py`
 
