@@ -1,9 +1,12 @@
 """OpScope dashboard. Run with: uv run streamlit run app.py"""
 import streamlit as st
 
+from opscope.ui import theme  # noqa: F401  (registers the Plotly template)
+from opscope.ui.brand import ICON
 from opscope.ui.cards import inject_css
 
-st.set_page_config(page_title="OpScope", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="OpScope", page_icon=ICON, layout="wide", initial_sidebar_state="expanded")
+st.logo(ICON, size="large", icon_image=ICON)
 inject_css()
 
 SETUP_HELP = """
@@ -40,9 +43,7 @@ pages = [
     st.Page("views/utility.py", title="Utility profiler", icon=":material/scatter_plot:"),
     st.Page("views/about.py", title="How it works", icon=":material/info:"),
 ]
-st.sidebar.markdown("## OpScope")
-st.sidebar.caption("VALORANT scouting for Cloud9")
 st.session_state["data_summary"] = (
     f"Data: GRID official match data · {summary['series']:,} series · {summary['games']:,} maps · "
     f"{summary['rounds']:,} rounds · {summary['first']} to {summary['last']}")
-st.navigation(pages).run()
+st.navigation(pages, position="top").run()

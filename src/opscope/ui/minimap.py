@@ -6,32 +6,45 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from opscope.maps import backdrop, spawns
+from opscope.ui.theme import ACCENT, AMBER, ATTACK, BG, DISPLAY, GOOD, MONO, SIDE_COLORS, TEXT_DIM
+from opscope.ui.theme import COLORWAY as CATEGORY_COLORS
 
-BUCKET_COLORS = {"0–20s": "#00AEEF", "20–40s": "#7BD389", "40–60s": "#F5B700", "60s+": "#F25F5C"}
-SIDE_COLORS = {"attacker": "#F25F5C", "defender": "#00AEEF"}
+BUCKET_COLORS = {"0–20s": ACCENT, "20–40s": GOOD, "40–60s": AMBER, "60s+": ATTACK}
+FLOOR = [[0, "#132131"], [1, "#2b4258"]]
+EDGE = "#4f86ad"
+
+
+def _edges(mask: np.ndarray) -> np.ndarray:
+    """Cells on the boundary of the playable area (in the mask, with a 4-neighbour outside it)."""
+    pad = np.pad(mask, 1, constant_values=False)
+    inner = pad[:-2, 1:-1] & pad[2:, 1:-1] & pad[1:-1, :-2] & pad[1:-1, 2:]
+    return mask & ~inner
 
 
 def base_map(map_name: str, height: int = 620) -> go.Figure:
+    """Data-drawn floor plan: a soft floor, a bright outline where walls are, ATK/DEF spawn badges."""
     bd = backdrop(map_name)
     ny, nx = bd.z.shape
+    # Blur the raw "anyone stood here" mask a little: fills 1 m speckle holes and rounds the jagged edges.
+    floor = _blur((bd.z > 0.05).astype(float), 0.9) > 0.45
+    grid = dict(x0=bd.x0 + bd.bin / 2, dx=bd.bin, y0=bd.y0 + bd.bin / 2, dy=bd.bin, showscale=False, hoverinfo="skip")
     fig = go.Figure()
-    fig.add_trace(go.Heatmap(
-        z=np.where(bd.z > 0.05, bd.z, np.nan), x0=bd.x0 + bd.bin / 2, dx=bd.bin, y0=bd.y0 + bd.bin / 2, dy=bd.bin,
-        colorscale=[[0, "#1d2733"], [1, "#4a5d73"]], showscale=False, hoverinfo="skip", name="map",
-    ))
+    fig.add_trace(go.Heatmap(z=np.where(floor, bd.z, np.nan), colorscale=FLOOR, name="map", **grid))
+    fig.add_trace(go.Heatmap(z=np.where(_edges(floor), 1.0, np.nan), colorscale=[[0, EDGE], [1, EDGE]],
+                             name="walls", **grid))
     for side, (x, y) in spawns(map_name).items():
+        color = SIDE_COLORS.get(side, TEXT_DIM)
         fig.add_trace(go.Scatter(
-            x=[x], y=[y], mode="markers+text", text=[f"{side[:3].upper()} spawn"], textposition="bottom center",
-            marker=dict(symbol="square", size=12, color=SIDE_COLORS.get(side, "#aaa")),
-            textfont=dict(color="#9aa7b4", size=11), hoverinfo="skip", showlegend=False,
+            x=[x], y=[y], mode="markers+text", text=[side[:3].upper()], textposition="middle center",
+            marker=dict(symbol="square", size=30, color=BG, line=dict(color=color, width=2)),
+            textfont=dict(family=MONO, color=color, size=11), hoverinfo="skip", showlegend=False,
         ))
-    pad = 0.06 * max(nx, ny) * bd.bin  # room for spawn labels at the edges
+    pad = 0.06 * max(nx, ny) * bd.bin  # room for spawn badges at the edges
     fig.update_layout(
         height=height, margin=dict(l=0, r=0, t=10, b=0),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(visible=False, range=[bd.x0 - pad, bd.x0 + nx * bd.bin + pad]),
         yaxis=dict(visible=False, range=[bd.y0 - pad, bd.y0 + ny * bd.bin + pad], scaleanchor="x", scaleratio=1),
-        legend=dict(orientation="h", y=1.02, x=0, font=dict(color="#c9d3dd"), bgcolor="rgba(0,0,0,0)"),
+        legend=dict(orientation="h", y=1.02, x=0),
         dragmode="pan",
     )
     return fig
@@ -78,9 +91,6 @@ def add_density(fig: go.Figure, df: pd.DataFrame, map_name: str, rgb: str = "0,1
     ))
 
 
-CATEGORY_COLORS = ["#00AEEF", "#F5B700", "#7BD389", "#F25F5C", "#B388EB", "#4DD0E1", "#FF9F68", "#E0E0E0"]
-
-
 def add_points_by_category(fig: go.Figure, df: pd.DataFrame, category: str, hover_cols: list[str],
                            arrows: bool = False, arrow_cm: float = 700) -> dict[str, str]:
     """One colored trace per category value (e.g. per ability); optional aim arrows from the view vector.
@@ -102,7 +112,7 @@ def add_points_by_category(fig: go.Figure, df: pd.DataFrame, category: str, hove
                                          opacity=0.5, hoverinfo="skip", showlegend=False))
         fig.add_trace(go.Scatter(
             x=part["x"], y=part["y"], mode="markers", name=str(value),
-            marker=dict(size=7, color=color, line=dict(width=0.5, color="#0e1117"), opacity=0.85),
+            marker=dict(size=7, color=color, line=dict(width=0.6, color=BG), opacity=0.85),
             customdata=part[hover_cols].to_numpy(),
             hovertemplate="<br>".join(f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(hover_cols)) + "<extra></extra>",
         ))
@@ -123,10 +133,23 @@ def add_spots(fig: go.Figure, spots: pd.DataFrame, radius_cm: float, label_col: 
     """Numbered rings for habitual spots."""
     for _, s in spots.iterrows():
         fig.add_shape(type="circle", x0=s.x - radius_cm, x1=s.x + radius_cm, y0=s.y - radius_cm, y1=s.y + radius_cm,
-                      line=dict(color="#ffffff", width=2), fillcolor="rgba(255,255,255,0.08)")
+                      line=dict(color="#ffffff", width=2, dash="dot"), fillcolor="rgba(255,255,255,0.07)")
     fig.add_trace(go.Scatter(
         x=spots["x"], y=spots["y"] + radius_cm * 1.6, mode="text", text=spots[label_col],
-        textfont=dict(color="#ffffff", size=13), hoverinfo="skip", showlegend=False))
+        textfont=dict(family=DISPLAY, color="#ffffff", size=13), hoverinfo="skip", showlegend=False))
+
+
+def add_sites(fig: go.Figure, sites: pd.DataFrame, radius_cm: float, color: str = AMBER) -> None:
+    """Bomb sites: a ring with the site letter inside and a caption (e.g. "55 plants") under it."""
+    for _, s in sites.iterrows():
+        fig.add_shape(type="circle", x0=s.x - radius_cm, x1=s.x + radius_cm, y0=s.y - radius_cm, y1=s.y + radius_cm,
+                      line=dict(color=color, width=2), fillcolor="rgba(245,183,0,0.10)")
+    fig.add_trace(go.Scatter(
+        x=sites["x"], y=sites["y"], mode="text", text=[str(n).split()[0] for n in sites["name"]],
+        textfont=dict(family=DISPLAY, color=color, size=24), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(
+        x=sites["x"], y=sites["y"] - radius_cm * 1.45, mode="text", text=sites["caption"],
+        textfont=dict(family=MONO, color="#ffffff", size=11), hoverinfo="skip", showlegend=False))
 
 
 def add_points_by_bucket(fig: go.Figure, df: pd.DataFrame, hover_cols: list[str]) -> None:
@@ -136,7 +159,7 @@ def add_points_by_bucket(fig: go.Figure, df: pd.DataFrame, hover_cols: list[str]
             continue
         fig.add_trace(go.Scatter(
             x=part["x"], y=part["y"], mode="markers", name=bucket,
-            marker=dict(size=8, color=color, line=dict(width=1, color="#0e1117"), opacity=0.85),
+            marker=dict(size=8, color=color, line=dict(width=1, color=BG), opacity=0.85),
             customdata=part[hover_cols].to_numpy(),
             hovertemplate="<br>".join(f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(hover_cols)) + "<extra></extra>",
         ))

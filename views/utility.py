@@ -7,9 +7,10 @@ import streamlit as st
 from opscope.analytics.landing import add_landings, landing_model
 from opscope.analytics.stats import MIN_SAMPLE, of
 from opscope.analytics.utility import SPOT_RADIUS_CM, UtilityScope, utility_report
-from opscope.ui.cards import insight, stat_card
+from opscope.ui.cards import insight, page_header, stat_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_points_by_category, add_spots, add_throw_lines, base_map
+from opscope.ui.theme import ACCENT, chart
 
 CLASSES = {"Traps & setups": ("trap",), "Recon": ("recon",), "Smokes": ("smoke",), "Stalls": ("stall",),
            "Flashes": ("flash",), "All": ()}
@@ -29,7 +30,7 @@ def report(scope: UtilityScope):
 
 f = sidebar()
 team = team_name(f["team_id"])
-st.title("Utility profiler")
+header_slot = st.empty()
 c1, c2 = st.columns([3, 2])
 with c1:
     cls_label = st.segmented_control("Utility", list(CLASSES), default="Traps & setups", key="util_class") or "All"
@@ -41,7 +42,9 @@ scope = UtilityScope(team_id=f["team_id"], side=f["side"], maps=f["maps"], oppon
 r = report(scope)
 side_txt = {"defender": "defense", "attacker": "attack"}.get(f["side"], "")
 unit = f"{side_txt} rounds".strip()
-st.caption(f"{team} · {', '.join(m.title() for m in f['maps']) or 'pick a map below'} · {f['side_label'].lower()} · {cls_label.lower()}")
+with header_slot.container():
+    page_header("Utility profiler", team, f"{cls_label} · {', '.join(m.title() for m in f['maps']) or 'pick a map below'} · "
+                                          f"{f['side_label'].lower()} · {phase_label.lower()}")
 
 if r.n_rounds == 0:
     st.info("No rounds match these filters.")
@@ -132,7 +135,7 @@ with left:
                                arrows=arrows and not landing_view)
     if show_spots and not strong.empty:
         add_spots(fig, strong, SPOT_RADIUS_CM)
-    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "displaylogo": False})
+    chart(fig, interactive=True)
     if landing_view:
         val = landing_model()["validation"]
         n_est = int(casts["land_x"].notna().sum())
@@ -167,8 +170,7 @@ with right:
         window = casts.assign(window=casts["phase"].map({"buy": "buy phase"}).fillna(casts["bucket"].astype(str)))
         tim = window.groupby("window").size().reindex(["buy phase", "0–20s", "20–40s", "40–60s", "60s+"], fill_value=0)
         figt = px.bar(tim.reset_index(name="casts"), x="window", y="casts", text="casts",
-                      color_discrete_sequence=["#00AEEF"])
-        figt.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0), xaxis_title=None, yaxis_title="casts",
-                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figt, width="stretch", config={"displayModeBar": False})
+                      color_discrete_sequence=[ACCENT])
+        figt.update_layout(height=250, xaxis_title=None, yaxis_title="casts")
+        chart(figt)
         st.caption("Time after the buy phase ends. Pre-round setups (buy phase) are shown separately.")

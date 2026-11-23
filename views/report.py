@@ -9,9 +9,10 @@ from opscope.analytics.operator import Scope, _filter_rounds, league_scope, team
 from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
 from opscope.load import CLOUD9_TEAMS, cohort_label, peer_group
-from opscope.ui.cards import insight_card, stat_card, suggestion_card
+from opscope.ui.cards import dossier_header, headline_card, insight_card, page_header, suggestion_card
 from opscope.ui.filters import sidebar, team_name
-from opscope.ui.minimap import add_spots, base_map
+from opscope.ui.minimap import add_sites, base_map
+from opscope.ui.theme import ACCENT, ATTACK, BG, DEFENSE, NEUTRAL_BAR, chart
 from opscope.zones import sites
 
 CATEGORIES = ["All", "Operator", "Utility", "Attack"]
@@ -26,46 +27,42 @@ f = sidebar()
 tid = f["team_id"]
 team = team_name(tid)
 scope = Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"], patches=f["patches"], events=f["events"])
-who = "Self-scout" if tid in CLOUD9_TEAMS else "Scouting report"
-st.title(f"{who}: {team}")
+self_scout = tid in CLOUD9_TEAMS
 roster = latest_roster(tid)
+_cohorts = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None))["cohort"].dropna().unique()
+pool = map_pool(scope)
+if pool.empty:
+    page_header("Self-scout" if self_scout else "Scouting report", team, "No games match these filters.")
+    st.info("No games match these filters.")
+    st.stop()
+
+# ---- dossier header -------------------------------------------------------------------------------
+games, wins = int(pool["games"].sum()), int(pool["wins"].sum())
+atk_w, atk_n = int(pool["atk_won"].sum()), int(pool["atk_n"].sum())
+def_w, def_n = int(pool["def_won"].sum()), int(pool["def_n"].sum())
+top = pool.iloc[0]
+dossier_header(
+    f"{'Self-scout' if self_scout else 'Opponent dossier'} · compared with {peer_group(_cohorts)}", team,
+    chips=list(roster.names) if roster else None, chip_label="Roster",
+    stats=[("Maps won", f"{wins}–{games - wins}", of(wins, games, "maps"), "#fff"),
+           ("Most played", top["map"].title(), of(int(top["games"]), games, "maps"), "#fff"),
+           ("Attack rounds won", f"{pct(atk_w, atk_n):.0%}", of(atk_w, atk_n), ATTACK),
+           ("Defense rounds won", f"{pct(def_w, def_n):.0%}", of(def_w, def_n), DEFENSE)])
 if roster:
-    scope_events = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"],
-                                                       patches=f["patches"], events=f["events"]))["event"].unique()
+    scope_events = _filter_rounds(team_rounds(), scope)["event"].unique()
     n_lineups = lineups_in(tid, scope_events)
     note = (f" This data covers **{n_lineups} different lineups**; team-wide rates mix them. Filter by Event "
             f"to focus on one. Tendencies about players who later left are marked and kept out of the game plan."
             if n_lineups > 1 else "")
-    st.markdown(f"**Roster as of their last match in the data** ({short_event(roster.event)}, {roster.last_match}): "
-                f"{', '.join(roster.names)}.{note}")
-_cohorts = _filter_rounds(team_rounds(), Scope(team_id=tid, side=None))["cohort"].dropna().unique()
-st.caption(f"Tendencies that stand out from other {peer_group(_cohorts)} teams (each season compared with itself), with the "
-           f"sample behind each one. Covers both sides; the Side filter applies to the profiler pages.")
+    st.caption(f"Roster as of their last match in the data ({short_event(roster.event)}, {roster.last_match}).{note}")
+st.caption(f"Tendencies that stand out from other {peer_group(_cohorts)} teams (each season compared with itself), with "
+           f"the sample behind each one. Covers both sides; the Side filter applies to the profiler pages.")
 
-pool = map_pool(scope)
-if pool.empty:
-    st.info("No games match these filters.")
-    st.stop()
-
-# ---- headline numbers ---------------------------------------------------------------------------
-games, wins = int(pool["games"].sum()), int(pool["wins"].sum())
-atk_w, atk_n = int(pool["atk_won"].sum()), int(pool["atk_n"].sum())
-def_w, def_n = int(pool["def_won"].sum()), int(pool["def_n"].sum())
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    stat_card("Maps won", f"{wins}–{games - wins}", of(wins, games, "maps"))
-with c2:
-    top = pool.iloc[0]
-    stat_card("Most played", top["map"].title(), of(int(top["games"]), games, "maps"))
-with c3:
-    stat_card("Attack rounds won", f"{pct(atk_w, atk_n):.0%}", of(atk_w, atk_n))
-with c4:
-    stat_card("Defense rounds won", f"{pct(def_w, def_n):.0%}", of(def_w, def_n))
-
-# ---- game plan ------------------------------------------------------------------------------------
+# ---- headline + game plan -------------------------------------------------------------------------
 items = insights_for(scope)
-self_scout = tid in CLOUD9_TEAMS
 plan = game_plan(items, self_scout=self_scout, limit=8)
+if plan:
+    headline_card(plan[0].evidence, "Most predictable habit" if self_scout else "#1 thing to know")
 if self_scout:
     st.subheader("Predictability check")
     st.caption("What an opponent scouting this team would see: the habits most worth varying.")
@@ -79,7 +76,7 @@ if plan:
     for col, chunk, start in ((pl, plan[:half], 1), (pr, plan[half:], half + 1)):
         with col:
             for n, sug in enumerate(chunk, start):
-                suggestion_card(sug, n)
+                suggestion_card(sug, n, self_scout)
 else:
     st.info("Nothing stands out from the league strongly enough to plan around yet.")
 
@@ -101,10 +98,17 @@ st.caption(f"{len(items)} tendencies found; showing the {len(shown)} furthest fr
 st.subheader("Map pool")
 mp = pool.assign(Map=pool["map"].str.title(),
                  Record=[f"{w}–{g - w}" for w, g in zip(pool["wins"], pool["games"])],
-                 Attack=[f"{pct(w, n):.0%} ({w}/{n})" for w, n in zip(pool["atk_won"], pool["atk_n"])],
-                 Defense=[f"{pct(w, n):.0%} ({w}/{n})" for w, n in zip(pool["def_won"], pool["def_n"])])
+                 Attack=[100 * pct(w, n) for w, n in zip(pool["atk_won"], pool["atk_n"])],
+                 atk=[f"{w}/{n}" for w, n in zip(pool["atk_won"], pool["atk_n"])],
+                 Defense=[100 * pct(w, n) for w, n in zip(pool["def_won"], pool["def_n"])],
+                 dfn=[f"{w}/{n}" for w, n in zip(pool["def_won"], pool["def_n"])])
 mp = mp.rename(columns={"games": "Maps"})
-st.dataframe(mp[["Map", "Maps", "Record", "Attack", "Defense"]], hide_index=True, width="stretch")
+rate_col = dict(format="%.0f%%", min_value=0, max_value=100, width="medium")
+st.dataframe(mp[["Map", "Maps", "Record", "Attack", "atk", "Defense", "dfn"]], hide_index=True, width="stretch",
+             column_config={"Attack": st.column_config.ProgressColumn("Attack rounds won", **rate_col),
+                            "atk": st.column_config.TextColumn("", width="small"),
+                            "Defense": st.column_config.ProgressColumn("Defense rounds won", **rate_col),
+                            "dfn": st.column_config.TextColumn("", width="small")})
 
 # ---- one map in detail --------------------------------------------------------------------------
 st.subheader("Map breakdown")
@@ -127,18 +131,19 @@ with left:
     if map_sites:
         sdf = pd.DataFrame(map_sites)
         counts = team_pl["site"].value_counts()
-        sdf["label"] = [f"{n}: {int(counts.get(n, 0))} plants" for n in sdf["name"]]
-        add_spots(fig, sdf, 600)
+        sdf["caption"] = [f"{int(counts.get(n, 0))} plants" for n in sdf["name"]]
+        add_sites(fig, sdf, 600)
     hab = [i for i in items if i.category == "Utility" and i.map == map_name]
     if hab:
         fig.add_trace(go.Scatter(
             x=[i.tags["x"] for i in hab], y=[i.tags["y"] for i in hab], mode="markers+text",
             text=[f"{i.tags['player']}: {i.tags['ability'].replace('-', ' ')}"
                   + (f" ({i.tags['area']})" if i.tags.get("area") else "") for i in hab], textposition="top center",
-            textfont=dict(color="#00AEEF", size=11), marker=dict(size=11, color="#00AEEF", symbol="diamond"),
+            textfont=dict(color="#bfe9fb", size=11),
+            marker=dict(size=12, color=ACCENT, symbol="diamond", line=dict(color=BG, width=1)),
             name="predictable utility", hoverinfo="text"))
-    st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "displaylogo": False})
-    st.caption("Rings: bomb sites with this team's plant count. Diamonds: utility this team places more predictably "
+    chart(fig, interactive=True)
+    st.caption("Amber rings: bomb sites with this team's plant count. Diamonds: utility this team places more predictably "
                "than a typical player. Sites are found from where teams plant; names match the official callouts.")
 
 with right:
@@ -151,12 +156,11 @@ with right:
             rows.append({"Site": s, "Team": pct(k, n), "League": pct(lk, ln), "label": f"{k}/{n}"})
         sp = pd.DataFrame(rows)
         figp = go.Figure()
-        figp.add_bar(y=sp["Site"], x=sp["Team"], orientation="h", name=team, marker_color="#00AEEF", text=sp["label"])
-        figp.add_bar(y=sp["Site"], x=sp["League"], orientation="h", name=lg_name, marker_color="#4a5d73")
+        figp.add_bar(y=sp["Site"], x=sp["Team"], orientation="h", name=team, marker_color=ACCENT, text=sp["label"])
+        figp.add_bar(y=sp["Site"], x=sp["League"], orientation="h", name=lg_name, marker_color=NEUTRAL_BAR)
         figp.update_layout(height=60 + 60 * len(sp), barmode="group", margin=dict(l=0, r=0, t=0, b=0),
-                           xaxis_tickformat=".0%", legend=dict(orientation="h", y=-0.25),
-                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(figp, width="stretch", config={"displayModeBar": False})
+                           xaxis_tickformat=".0%", legend=dict(orientation="h", y=-0.25))
+        chart(figp)
         st.caption(f"{len(team_pl)} planted attack rounds out of {len(tr)} attack rounds on {map_name.title()}.")
     else:
         st.caption("No plants recorded for this team on this map.")

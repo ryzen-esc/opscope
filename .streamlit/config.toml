@@ -1,10 +1,32 @@
 [theme]
 base = "dark"
 primaryColor = "#00AEEF"
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#151c24"
+backgroundColor = "#0b0f14"
+secondaryBackgroundColor = "#111821"
 textColor = "#dce6ef"
-font = "sans serif"
+borderColor = "#223040"
+dataframeBorderColor = "#1c2835"
+dataframeHeaderBackgroundColor = "#111821"
+baseRadius = "small"
+buttonRadius = "small"
+linkColor = "#4cc6f5"
+redColor = "#F25F5C"
+blueColor = "#00AEEF"
+greenColor = "#7BD389"
+yellowColor = "#F5B700"
+chartCategoricalColors = ["#00AEEF", "#F5B700", "#7BD389", "#F25F5C", "#B388EB", "#4DD0E1", "#FF9F68", "#c9d3dd"]
+# Fonts load from Google Fonts; without internet Streamlit falls back to its defaults.
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Chakra Petch:https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#0e141b"
+
+[client]
+toolbarMode = "minimal"
 
 [server]
 headless = true

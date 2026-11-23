@@ -7,10 +7,10 @@ from opscope.analytics.landing import landing_model
 from opscope.analytics.stats import MIN_SAMPLE
 from opscope.analytics.utility import SPOT_RADIUS_CM
 from opscope.ingest.build import cache_dir
-from opscope.ui.cards import stat_card
+from opscope.ui.cards import page_header, stat_card
 from opscope.zones import SITE_RADIUS_CM
 
-st.title("How it works")
+page_header("How it works", "Scouting you can check", "The method, how it was validated, and where the data stops")
 st.markdown("OpScope reads every recorded event of professional VALORANT matches and turns them into "
             "scouting a coach can check: **every number shows the rounds behind it**, and every tendency is "
             "compared with other teams in the same tier and season.")
