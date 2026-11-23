@@ -42,8 +42,9 @@ def base_map(map_name: str, height: int = 620) -> go.Figure:
     pad = 0.07 * max(nx, ny) * bd.bin  # room for spawn badges at the edges
     fig.update_layout(
         height=height, margin=dict(l=0, r=0, t=10, b=0),
-        xaxis=dict(visible=False, range=[bd.x0 - pad, bd.x0 + nx * bd.bin + pad]),
-        yaxis=dict(visible=False, range=[bd.y0 - pad, bd.y0 + ny * bd.bin + pad], scaleanchor="x", scaleratio=1),
+        xaxis=dict(visible=False, range=[bd.x0 - pad, bd.x0 + nx * bd.bin + pad], constrain="domain"),
+        yaxis=dict(visible=False, range=[bd.y0 - pad, bd.y0 + ny * bd.bin + pad], scaleanchor="x", scaleratio=1,
+                   constrain="domain"),
         legend=dict(orientation="h", y=1.0, yanchor="bottom", x=0),
         dragmode="pan",
     )

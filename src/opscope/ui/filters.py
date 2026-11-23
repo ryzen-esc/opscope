@@ -26,7 +26,8 @@ def team_name(team_id: str) -> str:
     return team_labels().get(team_id, team_id)
 
 
-def sidebar() -> dict:
+def sidebar(side_applies: bool = True) -> dict:
+    """side_applies=False (the report, which always covers both sides) shows Side greyed out but keeps its value."""
     labels = team_labels()
     st.sidebar.markdown("### Scout")
     team_id = st.sidebar.selectbox("Team", list(labels), format_func=labels.get, key="team_id")
@@ -38,7 +39,10 @@ def sidebar() -> dict:
     map_choice = st.sidebar.selectbox(
         "Map", map_opts, key="map",
         format_func=lambda m: m if m == "All maps" else f"{m.title()} ({map_counts[m]} games)")
-    side_label = st.sidebar.segmented_control("Side", list(SIDES), default="Defense", key="side") or "Both"
+    side_label = st.sidebar.segmented_control(
+        "Side" if side_applies else "Side (profiler pages only)", list(SIDES), default="Defense", key="side",
+        disabled=not side_applies,
+        help=None if side_applies else "The scouting report always covers both sides.") or "Both"
 
     opp_ids = mine["opp_id"].value_counts()
     opponents = st.sidebar.multiselect("Opponents", list(opp_ids.index), key="opponents",

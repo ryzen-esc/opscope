@@ -1,4 +1,6 @@
 """Scouting report: the one page a coach opens before playing a team (or to scout Cloud9 itself)."""
+from collections import Counter
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -23,7 +25,7 @@ def insights_for(scope: Scope):
     return team_insights(scope)
 
 
-f = sidebar()
+f = sidebar(side_applies=False)
 tid = f["team_id"]
 team = team_name(tid)
 scope = Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"], patches=f["patches"], events=f["events"])
@@ -56,7 +58,7 @@ if roster:
             if n_lineups > 1 else "")
     st.caption(f"Roster as of their last match in the data ({short_event(roster.event)}, {roster.last_match}).{note}")
 st.caption(f"Tendencies that stand out from other {peer_group(_cohorts)} teams (each season compared with itself), with "
-           f"the sample behind each one. Covers both sides; the Side filter applies to the profiler pages.")
+           f"the sample behind each one. Covers both sides.")
 
 # ---- headline + game plan -------------------------------------------------------------------------
 items = insights_for(scope)
@@ -112,7 +114,18 @@ st.dataframe(mp[["Map", "Maps", "Record", "Attack", "atk", "Defense", "dfn"]], h
 
 # ---- one map in detail --------------------------------------------------------------------------
 st.subheader("Map breakdown")
-map_name = f["maps"][0] if f["maps"] else st.selectbox("Map", list(pool["map"]), format_func=str.title, key="report_map")
+per_map = Counter(i.map for i in items)
+if f["maps"]:
+    map_name = f["maps"][0]
+else:
+    map_opts = sorted(pool["map"], key=lambda m: (-per_map.get(m, 0), list(pool["map"]).index(m)))
+    games_on = dict(zip(pool["map"], pool["games"]))
+
+    def _map_label(m: str) -> str:
+        k = per_map.get(m, 0)
+        return f"{m.title()} · {games_on[m]} maps played · {k} tendenc{'y' if k == 1 else 'ies'}"
+
+    map_name = st.selectbox("Map", map_opts, format_func=_map_label, key=f"report_map_{tid}")
 left, right = st.columns([3, 2], gap="large")
 
 tr = _filter_rounds(team_rounds(), Scope(team_id=tid, side="attacker", maps=(map_name,), opponents=f["opponents"],
@@ -126,7 +139,7 @@ team_pl = tr.merge(plants[keys + ["site"]], on=keys)
 lg_pl = lg[lg["team_id"] != tid].merge(plants[keys + ["site"]], on=keys)
 
 with left:
-    fig = base_map(map_name, height=560)
+    fig = base_map(map_name, height=680)
     map_sites = sites().get(map_name, [])
     if map_sites:
         sdf = pd.DataFrame(map_sites)
@@ -143,8 +156,10 @@ with left:
             marker=dict(size=12, color=ACCENT, symbol="diamond", line=dict(color=BG, width=1)),
             name="predictable utility", hoverinfo="text"))
     chart(fig, interactive=True)
-    st.caption("Amber rings: bomb sites with this team's plant count. Diamonds: utility this team places more predictably "
-               "than a typical player. Sites are found from where teams plant; names match the official callouts.")
+    diamonds = ("Diamonds: utility this team places more predictably than a typical player." if hab else
+                f"No utility on {map_name.title()} is placed more predictably than a typical player's.")
+    st.caption(f"Amber rings: bomb sites with this team's attack plant count. {diamonds} Sites are found from where "
+               f"teams plant; names match the official callouts.")
 
 with right:
     st.markdown(f"**Where they plant on {map_name.title()}**")
@@ -164,10 +179,13 @@ with right:
         st.caption(f"{len(team_pl)} planted attack rounds out of {len(tr)} attack rounds on {map_name.title()}.")
     else:
         st.caption("No plants recorded for this team on this map.")
-    st.markdown(f"**Tendencies on {map_name.title()}**")
-    on_map = [i for i in items if i.map == map_name][:5]
-    if on_map:
-        for ins in on_map:
-            insight_card(ins)
-    else:
-        st.caption("Nothing on this map stands out from the league yet.")
+    on_map = [i for i in items if i.map == map_name]
+    st.markdown(f"**Tendencies on {map_name.title()}** ({len(on_map)} of {len(items)})")
+    for ins in on_map[:5]:
+        insight_card(ins)
+    if len(on_map) < 3:
+        elsewhere = ", ".join(f"{m.title()} {k}" for m, k in per_map.most_common() if m != map_name)
+        lead = "Nothing else on" if on_map else "Nothing on"
+        st.caption(f"{lead} {map_name.title()} differs from other teams by enough to be sure (a tendency needs its 95% "
+                   f"range clear of the typical team, with {MIN_SAMPLE}+ rounds)."
+                   + (f" Tendencies by map: {elsewhere}." if elsewhere else ""))
