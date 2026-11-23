@@ -99,7 +99,7 @@ def main() -> None:
         data = init_sites()
         SITES_FILE.parent.mkdir(exist_ok=True)
         header = ("# Bomb-site centres per map (aggregate of planter positions; no match data).\n"
-                  "# Rename 'Site N' to the real callout (A/B/C). Positions are in game units (cm).\n")
+                  "# Names: nearest valorant-api.com Site callout (see sites.yaml header). Positions in cm.\n")
         SITES_FILE.write_text(header + yaml.safe_dump(data, sort_keys=True))
         sites.cache_clear()
         print(f"Wrote {SITES_FILE} ({sum(len(v) for v in data.values())} sites on {len(data)} maps)")

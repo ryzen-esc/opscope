@@ -1,99 +1,100 @@
 # Bomb-site centres per map (aggregate of planter positions; no match data).
-# Rename 'Site N' to the real callout (A/B/C). Positions are in game units (cm).
+# Names matched to the nearest 'Site' callout from valorant-api.com (same x/y as GRID;
+# every match within 20 m, next site 40+ m away). Positions are in game units (cm).
 abyss:
-- name: Site 1
-  x: -5335
-  y: -1107
-- name: Site 2
+- name: A site
   x: 4650
   y: -485
+- name: B site
+  x: -5335
+  y: -1107
 ascent:
-- name: Site 1
-  x: -3619
-  y: -7266
-- name: Site 2
+- name: A site
   x: 5677
   y: -7039
+- name: B site
+  x: -3619
+  y: -7266
 bind:
-- name: Site 1
+- name: A site
   x: 10465
   y: 2025
-- name: Site 2
+- name: B site
   x: 11268
   y: -4971
 breeze:
-- name: Site 1
+- name: A site
   x: 5072
   y: 6497
-- name: Site 2
+- name: B site
   x: 7490
   y: -4732
 corrode:
-- name: Site 1
-  x: -3830
-  y: -1696
-- name: Site 2
+- name: A site
   x: 4103
   y: -2278
+- name: B site
+  x: -3830
+  y: -1696
 fracture:
-- name: Site 1
-  x: 7984
-  y: -5668
-- name: Site 2
+- name: A site
   x: 8302
   y: 3780
+- name: B site
+  x: 7984
+  y: -5668
 haven:
-- name: Site 1
-  x: -2525
-  y: -9198
-- name: Site 2
-  x: 1824
-  y: -9070
-- name: Site 3
+- name: A site
   x: 6473
   y: -9359
+- name: B site
+  x: 1824
+  y: -9070
+- name: C site
+  x: -2525
+  y: -9198
 icebox:
-- name: Site 1
+- name: A site
   x: -7304
   y: 3427
-- name: Site 2
+- name: B site
   x: 1428
   y: 1447
 lotus:
-- name: Site 1
-  x: 6229
-  y: -4820
-- name: Site 2
-  x: 6691
-  y: 222
-- name: Site 3
+- name: A site
   x: 7702
   y: 5980
+- name: B site
+  x: 6691
+  y: 222
+- name: C site
+  x: 6229
+  y: -4820
 pearl:
-- name: Site 1
-  x: 6551
-  y: -4114
-- name: Site 2
+- name: A site
   x: 7512
   y: 4534
+- name: B site
+  x: 6551
+  y: -4114
 split:
-- name: Site 1
-  x: -2196
-  y: -6716
-- name: Site 2
+- name: A site
   x: 7491
   y: -7130
+- name: B site
+  x: -2196
+  y: -6716
 summit:
-- name: Site 1
+- name: A site
   x: 7332
   y: 11268
-- name: Site 2
+- name: B site
   x: 8794
   y: 1297
 sunset:
-- name: Site 1
-  x: 873
-  y: -4629
-- name: Site 2
+- name: A site
   x: 2112
   y: 3905
+- name: B site
+  x: 873
+  y: -4629

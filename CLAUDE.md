@@ -57,9 +57,9 @@ Python 3.14, uv, pandas, plotly, streamlit. Package in `src/opscope/` (`data.py`
 - **M4 (Scouting report) first version works**, and it's now the app's front page (`views/report.py`): headline cards, ranked "Key tendencies", map pool, and a per-map breakdown (sites, plant split vs league, predictable utility).
   - `analytics/insights.py`: Insight objects from three sources (gun usage vs league, plant site vs league, utility habits vs a league habit baseline). Ranked by `surprise` = gap between the team's 95% Wilson interval and the league rate.
   - Lesson: habits need a league baseline. Without one, "Viper wall in the same spot 70/71" topped every report, but that's a standard lineup.
-  - `zones.py` + `sites.yaml`: bomb sites found by k-means on planter positions (2 per map, 3 on Haven/Lotus). Names are still "Site N". **Someone who knows the maps needs to rename them to A/B/C** (the YAML is safe to commit; it holds only centres).
+  - `zones.py` + `sites.yaml`: bomb sites found by k-means on planter positions (2 per map, 3 on Haven/Lotus). Names (A/B/C) come from matching each centre to the nearest "Site" callout from valorant-api.com (`/v1/maps` → `callouts`). That API uses **the same x/y as GRID** (identity transform; all matches within 20 m, next site 40+ m away). The same callouts (A Main, Mid Courtyard, …) could name any position. The YAML holds only centres, so it's safe to commit.
   - The first report load for a team takes ~3–12 s (league habit baselines), then it's cached.
-- Next: name the sites; M5 (anti-strat suggestions + polish, e.g. precomputing the baselines).
+- Next: M5 (anti-strat suggestions + polish, e.g. precomputing the baselines); optionally use the callouts so habit spots read "near A Main".
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#. Explain data/format decisions briefly; keep PRs and commits small.

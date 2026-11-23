@@ -103,7 +103,7 @@ with left:
             name="predictable utility", hoverinfo="text"))
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
     st.caption("Rings: bomb sites with this team's plant count. Diamonds: utility this team places more predictably "
-               "than a typical player. Site names come from sites.yaml and can be renamed to A/B/C.")
+               "than a typical player. Sites are found from where teams plant; names match the official callouts.")
 
 with right:
     st.markdown(f"**Where they plant on {map_name.title()}**")
