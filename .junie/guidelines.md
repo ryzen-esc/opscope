@@ -12,7 +12,8 @@ VALORANT scouting tool for Cloud9 coaches (Cloud9 x JetBrains "Sky's The Limit" 
 - `ingest/feed.py`: `SeriesParser` turns one GRID feed into rows (games, rounds, loadouts, engagements, casts, snapshots). It handles GRID rollbacks (`!` actions) with an undo stack keyed by (type, actor id, target id).
 - `ingest/supplement.py`: joins precise cast positions on `grid_event_id`. `ingest/build.py`: parallel build into `cache/v1/*.parquet`.
 - `load.py`: `load()` returns a `Dataset` of DataFrames. `taxonomy.py`: weapon groups and ability → utility class.
-- `analytics/`: `operator.py` (Scope → OperatorReport), `stats.py` (Wilson interval, "k of n" text).
+- `analytics/`: `operator.py` (Scope → OperatorReport, `team_rounds`, `league_scope`, `season_weighted_rate`), `utility.py` (habits), `insights.py` (ranked insights), `antistrat.py` (game plan), `landing.py` (landing estimates), `roster.py` (rosters per event), `stats.py` (Wilson interval, `typical_rate`, "k of n" text).
+- `zones.py` + `sites.yaml`/`callouts.yaml`: bomb sites and area names. Comparisons are always with the typical *other* team in the same tier and season.
 - `maps.py`: data-drawn backdrop, spawns, aggression. `ui/`: minimap, cards, filters.
 
 ## Testing rules

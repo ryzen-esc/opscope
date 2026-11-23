@@ -6,7 +6,7 @@ OpScope was built by one person working with three AI tools, each in its own rol
 |---|---|
 | **Claude Code** (in the Claude desktop app, with a built-in browser) | The main engineer. It planned the project, wrote the data pipeline and analytics, and checked its own work by running code against the real data, writing tests, and opening every page in a browser. |
 | **Junie** (PyCharm, Code mode) | Drafted well-specified pieces: the synthetic test fixtures and the first ingest test suite. |
-| **JetBrains AI Assistant** (PyCharm) | IDE-side help, set up with detailed data collection off. |
+| **JetBrains AI Assistant** (PyCharm) | Tried first for the test task; its Chat mode can't edit files, so that work moved to Junie. Set up with detailed data collection off. |
 | **Me** | Direction, VALORANT knowledge, and review: choosing what to build, challenging claims, and steering toward what a coach needs. |
 
 The rule that made it work: **AI drafts, something independent checks.** That check was the real data, a test, a held-out set of matches, a second source, or me.
@@ -40,10 +40,10 @@ I asked whether the patch and roster differences in the data mattered. Checking 
 - **Mixed tiers:** the "league" mixed VCT 2025 with mostly Game Changers 2026, which plays a different meta. The Lotus Op rate is 10% in VCT but 17% in Game Changers, so Cloud9's difference had been overstated.
 - **Mixed rosters:** team tendencies blended rosters. NRG's game plan cited FNS, who had left before Stage 2.
 
-Before changing anything, we confirmed both fixes stay within the provided data. Now each team is compared only with its own tier and season, and tendencies of players who later left are marked and kept out of the game plan. A follow-up made the comparison the **typical team** (the median of each team's own rate) instead of all rounds pooled, so one extreme team can't move it. Measuring that also disproved one of my own explanations: I had said a 33% Odin rate on Corrode was "mostly NRG", but the typical VCT 2025 team was at 32%. It was the meta, not one team.
+Before changing anything, we confirmed both fixes stay within the provided data. Now each team is compared only with its own tier and season, and tendencies of players who later left are marked and kept out of the game plan. A follow-up made the comparison the **typical team** (the median of each team's own rate) instead of all rounds pooled, so one extreme team can't move it. Measuring that also disproved one of Claude Code's own explanations: it had told me a 33% Odin rate on Corrode was "mostly NRG", but the typical VCT 2025 team was at 32%. It was the meta, not one team.
 
 ### 8. The human catches the AI
-Claude Code told me turrets deal no damage. I knew that was wrong and checked a search to be sure. The data agreed with me: 1,890 turret damage events. Turrets still had to be excluded, but for a better reason, which is now documented: a turret's victims stand ~23 m from the turret, so they can't locate it. Writing the in-app methodology page caught two more overclaims the same way ("±1 m precision" was never measured, and "replayed maps" were really "cancelled map starts").
+Claude Code told me turrets deal no damage. I knew that was wrong and checked a search to be sure. The data agreed with me: 1,890 turret damage events. Turrets still had to be excluded, but for a better reason, which is now documented: a turret's victims stand ~23 m from the turret, so they can't locate it. Claude Code caught two more of its own overclaims while writing the in-app methodology page ("±1 m precision" was never measured, and "replayed maps" were really "cancelled map starts").
 
 ## Keeping licensed data safe with AI tools
 

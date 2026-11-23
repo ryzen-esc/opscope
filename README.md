@@ -12,7 +12,7 @@ Coaches spend hours scrubbing VODs to answer questions like *"Who holds the Op o
 | Page | What a coach gets |
 |---|---|
 | **Scouting report** | Pick an opponent and get a **game plan**: counters to their most unusual tendencies, each citing its sample. Then ranked key tendencies, the map pool, and a per-map breakdown of where they plant and which utility they place predictably. Pick Cloud9 and the same page becomes a **predictability check**: what an opponent scouting Cloud9 would see. |
-| **Operator profiler** | Who buys the Operator (or Odin, Outlaw, Marshal), how often per map and side vs the league, where the holder sits by time in the round, kill sightlines, when it first fires, whether it changes hands, and full-buy win rate with and without it. |
+| **Operator profiler** | Who buys the Operator (or Odin, Outlaw, Marshal), how often per map and side vs the typical team in the same tier and season, where the holder sits by time in the round, kill sightlines, when it first fires, whether it changes hands, and full-buy win rate with and without it. |
 | **Utility profiler** | Where traps, recon, smokes, stalls and flashes are cast, before or during the round. **Habit spots** are utility a player puts in the same place round after round. For mollies, nanoswarms and other damaging utility, it shows a **validated estimate of where it lands**. |
 | **How it works** | The method and its limits, in plain language, with live pipeline numbers. |
 
@@ -51,7 +51,7 @@ In **PyCharm**, the shared run configurations in `.run/` (OpScope app, Build cac
 src/opscope/
   ingest/      stream each GRID series (zstd, never decompressed to disk) into parquet tables;
                replays GRID's rollback events so every map matches its official score
-  analytics/   operator · utility · insights (league comparison + ranking) · antistrat · landing
+  analytics/   operator · utility · insights (typical-team comparison + ranking) · antistrat · landing
   zones.py     bomb sites from 29k plant positions; area names from map callouts
   ui/          data-drawn minimap (no Riot art), cards, shared filters
 views/         Streamlit pages

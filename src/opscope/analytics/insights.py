@@ -93,7 +93,7 @@ def early_area(holders: pd.DataFrame, map_name: str, window: float = SETUP_WINDO
 
 
 def gun_insights(s: Scope) -> list[Insight]:
-    """Big-gun usage per map/side vs the league, and who carries it."""
+    """Big-gun usage per map/side vs the typical other team in the same tier and season, and who carries it."""
     d = load()
     tr_all = team_rounds()
     team = _filter_rounds(tr_all, Scope(team_id=s.team_id, side=None, maps=s.maps, opponents=s.opponents,

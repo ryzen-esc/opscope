@@ -11,12 +11,13 @@
 - [x] **GitHub repo public:** https://github.com/ryzen-esc/opscope
 - [ ] Fill in Devpost from `notes/DEVPOST.md` (repo link above).
 
-## Before pushing (Claude Code can run these with you)
-- [ ] `git ls-files | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb)$|stl-hackathon-2026-grid-starter'` prints nothing.
-- [ ] `uv run pytest` passes.
-- [ ] A fresh clone in a temp folder → follow the README run steps → the app opens (tests the judge's path end to end).
-- [ ] `.idea/` and `.junie/` are committed (the rules encourage it); `.idea/workspace.xml` is not.
-- [ ] LICENSE (MIT) is at the root.
+## Before pushing (all passed Nov 23, 2026; re-run before submitting)
+- [x] `git ls-files | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb)$|stl-hackathon-2026-grid-starter'` prints nothing.
+- [x] `uv run pytest` passes (44 tests).
+- [x] A fresh clone in a temp folder → follow the README run steps → the app opens (tests the judge's path end to end).
+- [x] `.idea/` and `.junie/` are committed (the rules encourage it); `.idea/workspace.xml` is not.
+- [x] LICENSE (MIT) is at the root.
+- [x] No school email in commit history (noreply address only).
 
 ## Docs in the repo
 - `README.md`: what it does, run steps, JetBrains tools, credits

@@ -1,5 +1,7 @@
 # OpScope — project plan
 
+> **Original plan from Nov 23, 2026, kept for history.** Everything here was built (some designs changed, e.g. site names came from map callouts instead of manual labelling). Current status: `CLAUDE.md`.
+
 ## Context
 OpScope is a hackathon entry for Cloud9 x JetBrains "Sky's The Limit" 2026, Category 1. Deadline: **Jan 12, 2027, 11am PT**. Today the repo is only a scaffold: a placeholder Streamlit page, `data.py` streaming helpers and `explore.py`.
 

@@ -2,7 +2,7 @@
 
 > Paste each section into the matching Devpost field. Numbers come from the current build; re-check them if the data or method changes.
 
-**Tagline:** Scouting reports for VALORANT coaches. Every tendency comes with the rounds behind it and the league rate beside it.
+**Tagline:** Scouting reports for VALORANT coaches. Every tendency comes with the rounds behind it and the typical team's rate beside it.
 
 ## Inspiration
 Scouting a VALORANT opponent means hours of VOD review to answer simple questions: who holds the Op on their Haven defense, where does their Killjoy put her nanoswarm, which site do they finish on? GRID's event data records all of it. It just needed to be turned into answers a coach can trust at a glance.
@@ -10,7 +10,7 @@ Scouting a VALORANT opponent means hours of VOD review to answer simple question
 ## What it does
 OpScope reads every recorded event from 2,079 pro maps (3.5M events) and builds:
 - **Scouting report:** pick an opponent and get a **game plan**. These are counters to their most unusual tendencies, written from your side ("Expect Odin spam near A Door when you attack Lotus: they bring an Odin in 47 of 117 defense rounds; typical VCT 2025 team: 11%"). Then ranked key tendencies, the map pool, and a per-map breakdown of plant sites and predictable utility. Pick Cloud9 and it becomes a **predictability check**: what opponents scouting Cloud9 would see.
-- **Operator profiler:** who buys the Op/Odin/Outlaw/Marshal, how often vs the league, where the holder sits by time in the round, kill sightlines, timing, pickups, and full-buy win rates.
+- **Operator profiler:** who buys the Op/Odin/Outlaw/Marshal, how often vs the typical team in the same tier and season, where the holder sits by time in the round, kill sightlines, timing, pickups, and full-buy win rates.
 - **Utility profiler:** where traps, recon, smokes, stalls and flashes go, before or during the round. **Habit spots** a player reuses round after round, and **validated landing estimates** for damaging utility.
 
 Every number shows its sample ("30 of 80 rounds"). Teams are compared only with teams in the same tier and season, and tendencies appear only when the team's 95% range clears that rate. Players who later left the roster are flagged, and map areas are named the way players say them ("near B Main").
@@ -18,12 +18,12 @@ Every number shows its sample ("30 of 80 rounds"). Teams are compared only with 
 ## How we built it
 - **Pipeline:** Python 3.14 streams the compressed GRID feeds (never decompressed to disk) into a parquet cache in about 4 minutes. The parser replays GRID's 13,255 rollback events, so every map matches its official score.
 - **Analytics** (pandas):
-  - league comparisons with Wilson intervals
-  - habit clustering with a per-ability league baseline
+  - comparisons with the typical team in the same tier and season, using Wilson intervals
+  - habit clustering compared with other players of the same ability
   - bomb sites from clustering 28,952 plant positions
   - area names from community callouts, verified to share GRID's coordinates
   - a landing-spot model validated on held-out matches
-- **UI:** Streamlit + Plotly, with a minimap drawn from 1.4M recorded positions (no Riot art).
+- **UI:** Streamlit + Plotly, with a minimap drawn from about 3 million recorded player positions (no Riot art).
 - **Tests:** 44, using synthetic events, including mutation-checked rollback tests and a headless render of every page.
 - **Tools:** built in **PyCharm** with **Junie**, **JetBrains AI Assistant** and **Claude Code**. See "JetBrains tools" below and AI_SHOWCASE.md.
 

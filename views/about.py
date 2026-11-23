@@ -98,7 +98,7 @@ not where the turret was. A turret is placed right next to Killjoy, so its cast 
         st.caption(f"Landing model not available yet ({exc}).")
 with st.expander("Sites and named areas"):
     st.markdown(f"""
-- **Bomb sites** are found by clustering about 29,000 plant positions; sites come out 3–7 m wide.
+- **Bomb sites** are found by clustering about 29,000 plant positions; plants sit 2.5–7 m from their site's centre on average.
 - **Names** (A Site, B Main, Mid Courtyard…) come from the community API at valorant-api.com, which uses the
   same coordinates as GRID: on all 13 maps, every site matched its official callout within 20 m.
 - A position is named after the nearest callout point, and anything within {SITE_RADIUS_CM // 100} m of a site

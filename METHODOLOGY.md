@@ -51,7 +51,7 @@ Every claim carries its sample: **"k of n rounds"**.
 - **Survived with it:** the holder is alive at round end with the gun still in their inventory.
 - **Changed hands:** someone fired the gun who didn't buy it.
 - **Where it sits:** every recorded position of the holder in those rounds (when they shot, got hit or cast), shown as a density with 3 m bins and a blur, filtered by time since the buy phase. Positions are sparse: the median first sighting of an Op holder is 32 s into the round, so the map always says how many rounds it covers.
-- **Setup style:** the holder's first position within 30 s, scored `d_def / (d_def + d_atk)`, where `d_def` and `d_atk` are distances to the median defender and attacker spawn. This works on three-site maps, where a single spawn-to-spawn axis would not. The team's median is ranked against every other team's setups on that map and side.
+- **Setup style:** the holder's first position within 30 s, scored `d_def / (d_def + d_atk)`, where `d_def` and `d_atk` are distances to the median defender and attacker spawn. This works on three-site maps, where a single spawn-to-spawn axis would not. The team's median is ranked against other teams' setups (same tier and season) on that map and side.
 - **Kill sightlines:** each kill with the gun is drawn from shooter to victim.
 
 ## 4. Utility profiler and habits
@@ -71,7 +71,7 @@ Rosters change during a season, so team tendencies can mix lineups. For each eve
 
 ## 6. Bomb sites and named areas
 
-- **Bomb sites:** k-means clustering of **28,952** planter positions finds 2 sites per map (3 on Haven and Lotus), each 3–7 m across.
+- **Bomb sites:** k-means clustering of **28,952** planter positions finds 2 sites per map (3 on Haven and Lotus). Plants sit 2.5–7 m from their site's centre on average, so the clusters are tight.
 - **Site names:** the data can't tell A from B. The community API at valorant-api.com lists every map's callouts with coordinates. Testing all 8 axis flips and swaps showed it uses **the same coordinate system as GRID**, unchanged, on all 13 maps. Each plant cluster sits 2–19 m from its "Site" callout, and the next site is 42–122 m away, so the match is unambiguous. As a sanity check, Haven's and Lotus's middle site comes out as B.
 - **Area names:** any position is named after the nearest of 346 callout points within 25 m. Within 8 m of a site centre it's named after the site, because a callout is a single point and a large site's centre can be closer to a neighbouring callout. A test that compares the two sources caught exactly that ("B Boat House" for Ascent's B site). **The letter (A/B/C/Mid) is reliable; the exact area is a best guess near borders.**
 
@@ -109,5 +109,5 @@ The rules are simple and readable by design. They're prompts for prep, not order
 
 - Positions exist only at events, so quiet players and quiet rounds leave gaps. Every map view states how many rounds it covers.
 - Landing spots are estimates, and only for damaging utility. Area names are a best guess near borders.
-- Patches change agents. For example, Trapwire was reworked in patch 11.08, and the data spans patches 10.00–13.x. Use the Patch filter when comparing across a rework.
+- Patches change agents and abilities, and the data spans patches 10.00–13.x. Use the Patch filter when comparing across a rework.
 - The data is what GRID recorded for the hackathon. Some scheduled matches are missing, and 40 VALORANT series end flagged invalid by GRID; their rounds are kept, since each round still matches the official score.
