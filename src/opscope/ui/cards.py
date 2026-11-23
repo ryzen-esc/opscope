@@ -40,7 +40,8 @@ CSS = """
 <style>
 .ops-card {background:#151c24;border:1px solid #243140;border-radius:10px;padding:14px 16px;height:100%;}
 .ops-title {color:#8b9bab;font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;}
-.ops-value {font-size:2rem;font-weight:700;line-height:1.2;margin-top:2px;}
+.ops-value {font-size:clamp(1.15rem, 2.1vw, 2rem);font-weight:700;line-height:1.2;margin-top:2px;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ops-sample {color:#c9d3dd;font-size:0.85rem;}
 .ops-ctx {color:#8b9bab;font-size:0.78rem;margin-top:4px;}
 .ops-insight {background:#0f2533;border-left:4px solid #00AEEF;border-radius:6px;padding:10px 14px;margin:6px 0;color:#dce6ef;}

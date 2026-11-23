@@ -48,6 +48,9 @@ def sidebar() -> dict:
         events = st.multiselect("Event", sorted(mine["event"].dropna().unique()), key="events")
 
     st.sidebar.caption(f"{mine['game_id'].nunique()} maps · {mine['series_id'].nunique()} series in the data")
+    if st.session_state.get("data_summary"):
+        st.sidebar.divider()
+        st.sidebar.caption(st.session_state["data_summary"])
     return {
         "team_id": team_id,
         "maps": () if map_choice == "All maps" else (map_choice,),

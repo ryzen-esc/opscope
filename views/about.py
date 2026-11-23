@@ -1,0 +1,98 @@
+"""How it works: what the numbers mean, where they come from, and where they stop being reliable."""
+import json
+
+import streamlit as st
+
+from opscope.analytics.stats import MIN_SAMPLE
+from opscope.analytics.utility import SPOT_RADIUS_CM
+from opscope.ingest.build import cache_dir
+from opscope.ui.cards import stat_card
+from opscope.zones import SITE_RADIUS_CM
+
+st.title("How it works")
+st.markdown("OpScope reads every recorded event of professional VALORANT matches and turns them into "
+            "scouting a coach can check: **every number shows the rounds behind it**, and every tendency is "
+            "compared with the rest of the league.")
+
+report_path = cache_dir() / "ingest_report.json"
+rep = json.loads(report_path.read_text()) if report_path.exists() else {}
+rows, totals = rep.get("table_rows", {}), rep.get("totals", {})
+if rows:
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        stat_card("Series read", f"{rep.get('built_series', 0):,}", f"{totals.get('events', 0):,} events")
+    with c2:
+        stat_card("Rounds", f"{rows.get('rounds', 0):,}", f"{rows.get('games', 0):,} maps, all matching official scores")
+    with c3:
+        stat_card("Ability casts", f"{rows.get('casts', 0):,}",
+                  f"{totals.get('casts_supplemented', 0) / max(rows.get('casts', 1), 1):.1%} with precise positions")
+    with c4:
+        stat_card("Corrections applied", f"{totals.get('rollback_applied', 0):,}",
+                  f"undone events, incl. {totals.get('rolled_back_games', 0)} cancelled map starts")
+
+st.header("Reading a card")
+st.markdown(f"""
+- **"48 of 64 rounds"** is the evidence: how often it happened and out of how many chances.
+- **League** is the same number for every other team on the same map and side.
+- **95% range** is how far the true rate could plausibly be from what we saw, given the sample (a Wilson interval).
+  Small samples give wide ranges.
+- A **tendency** is only listed when that range does not overlap the league rate, and it needs at least
+  {MIN_SAMPLE} rounds. Percentages on fewer rounds are hidden ("too few to call").
+- Tendencies are **ranked** by the gap between the range and the league rate, so the top cards are both unusual
+  and well supported.
+""")
+
+st.header("Where each feature comes from")
+with st.expander("Operator profiler", expanded=True):
+    st.markdown("""
+- **Who has the gun:** the inventory at the end of the buy phase, for every player in every round.
+  "Survived with it" uses the inventory at round end.
+- **Changing hands:** pickups aren't recorded, so a pickup is inferred when someone who didn't buy the gun
+  deals damage with it.
+- **Where it sits:** GRID records a player's position only when they shoot, get hit or use an ability, about
+  ±1–4 m. Quiet rounds leave gaps, so the map shows a density of every recorded position, filtered by time in
+  the round, and always says how many rounds it covers.
+- **Setup style:** the first position in the first 30 s, scored from 0 (defender spawn) to 1 (attacker spawn)
+  and compared with every other team's setups on that map.
+- **Win rate** is compared only within full buys, so eco rounds don't skew it.
+""")
+with st.expander("Utility profiler"):
+    st.markdown(f"""
+- **Position:** where the player stood when casting, from the ability supplement, which interpolates
+  movement samples taken 5 times a second (once a second in VCT Americas 2025, so a moving player can be a
+  few metres off there). **Where utility lands is not recorded**, so thrown utility shows the aim direction instead.
+- **Habit spots:** casts within {SPOT_RADIUS_CM // 100} m of each other count as the same spot. A habit is
+  counted in *rounds the player was on that agent*, so a rarely played agent can't look like a strong habit.
+- **Compared with a typical player:** some utility is always placed the same way (a Viper wall lineup), so a
+  habit only becomes a tendency when it is more predictable than the median player with the same ability on
+  the same map and side.
+""")
+with st.expander("Sites and named areas"):
+    st.markdown(f"""
+- **Bomb sites** are found by clustering about 29,000 plant positions; sites come out 3–7 m wide.
+- **Names** (A Site, B Main, Mid Courtyard…) come from the community API at valorant-api.com, which uses the
+  same coordinates as GRID: on all 13 maps, every site matched its official callout within 20 m.
+- A position is named after the nearest callout point, and anything within {SITE_RADIUS_CM // 100} m of a site
+  centre is named after the site. **The letter (A/B/C/Mid) is reliable; the exact area is a best guess near
+  borders**, because each callout is a single point.
+""")
+with st.expander("Game plan and predictability check"):
+    st.markdown("""
+- Each ranked tendency becomes one short suggestion, written from your side: their defense is your attack.
+- For Cloud9's own rosters, the same tendencies become a **predictability check**: what an opponent scouting
+  Cloud9 would see.
+- The suggestions follow simple, readable rules and always cite the evidence. They are prompts for preparation,
+  not orders.
+""")
+
+st.header("Limits worth knowing")
+st.markdown("""
+- **No landing spots** for utility, and **no continuous movement**: positions exist only at events.
+- **Rosters change.** Cloud9 (VCT Americas 2025) and Cloud9 GC (Game Changers NA 2026) are separate teams here.
+- **Buy types** are by total team loadout: eco under 6,000; full buy at 18,000 and up; rounds 1 and 13 are pistols.
+- **The data covers 2025–2026 events** in the hackathon set. Matches GRID didn't record aren't included.
+""")
+
+st.header("Built with")
+st.markdown("Python 3.14, pandas, Plotly and Streamlit, built in **PyCharm** with **Junie** and **JetBrains AI "
+            "Assistant**, and **Claude Code**. Match data © GRID and Riot Games; this project is not endorsed by Riot Games.")
