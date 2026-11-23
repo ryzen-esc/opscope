@@ -2,12 +2,12 @@
 import plotly.express as px
 import streamlit as st
 
-from opscope.analytics.operator import SETUP_WINDOW, Scope, operator_report
+from opscope.analytics.operator import SETUP_WINDOW, Scope, operator_report, time_bucket
 from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
-from opscope.ui.cards import insight, page_header, rate_card
+from opscope.ui.cards import insight, map_key, page_header, rate_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import BUCKET_COLORS, add_density, add_points_by_bucket, add_sightlines, base_map
-from opscope.ui.theme import ACCENT, TEXT_DIM, chart
+from opscope.ui.theme import ACCENT, AMBER, ATTACK, TEXT_DIM, chart, count_axis
 from opscope.zones import nearest_callout
 
 WEAPONS = {"Operator": "operator", "Odin": "odin", "Outlaw": "outlaw", "Marshal": "marshal"}
@@ -96,21 +96,39 @@ with left:
     with ctl2:
         show_lines = st.toggle("Kill lines", value=True)
     shown = pos[pos["bucket"].isin(buckets)]
+    # Kill lines follow the same time windows as the dots, so every line starts where the holder was seen.
+    sight = sight[time_bucket(sight["t"]).isin(buckets)]
+    gun_rounds_map = int(r.holders["map"].eq(map_name).sum())
+    seen_rounds = shown[["game_id", "round_num"]].drop_duplicates().shape[0]
+    holder_names = shown["player_name"].value_counts()
+    who = " and ".join(f"<b>{n}</b>" for n in holder_names.index[:2]) or "the holder"
+    map_key(
+        [f'<span style="color:{ACCENT}">●</span> Dots: where {who} stood with the {gun} when they shot, got hit '
+         f"or used an ability (colour = time in round)",
+         f'<span style="color:{ATTACK}">◯—✕</span> Lines: their {gun} kills, shooter to victim',
+         f"<b>{gun_rounds_map}</b> {gun} round{'' if gun_rounds_map == 1 else 's'} on {map_name.title()} · "
+         f"{len(shown)} moments in {seen_rounds} of them"])
+    if 0 < gun_rounds_map < MIN_SAMPLE:
+        plural = gun_rounds_map != 1
+        insight(f"Only <b>{gun_rounds_map} {gun} round{'s' if plural else ''}</b> on {map_name.title()} "
+                f"match{'' if plural else 'es'} these filters: too few to read a setup. Clear the Opponents filter "
+                f"or pick another map.", AMBER)
     fig = base_map(map_name)
     add_density(fig, shown, map_name)
-    if show_lines:
-        add_sightlines(fig, sight, name=f"{gun} kills")
+    if show_lines and not sight.empty:
+        names = {**dict(zip(r.holders["player_id"], r.holders["player_name"])),
+                 **dict(zip(r.pickups.get("actor_id", []), r.pickups.get("player_name", [])))}
+        hover = [f"{names.get(a, 'teammate')}: {gun} kill at {t:.0f}s" for a, t in zip(sight["actor_id"], sight["t"])]
+        add_sightlines(fig, sight, name=f"{gun} kills", hover=hover)
     if not shown.empty:
         tmp = shown.assign(time=shown["t"].round(0).astype(int).astype(str) + "s", via=shown["source"],
                            area=nearest_callout(map_name, shown["x"], shown["y"]))
         add_points_by_bucket(fig, tmp, ["player_name", "agent", "area", "time", "via"])
+    fig.update_layout(legend_title_text="Seen at ")
     chart(fig, interactive=True)
-    gun_rounds_map = int(r.holders["map"].eq(map_name).sum())
-    seen_rounds = shown[["game_id", "round_num"]].drop_duplicates().shape[0]
-    st.caption(f"Shaded area and dots: every position recorded for the {gun} holder in the chosen time windows "
-               f"({len(shown)} positions from {of(seen_rounds, gun_rounds_map, f'{gun} rounds')} on {map_name.title()}). "
-               f"GRID records a position only when a player shoots, gets hit or uses an ability, so quiet rounds "
-               f"leave gaps. Lines: {len(sight)} {gun} kills, shooter → victim. Positions are ±1–4 m.")
+    st.caption(f"GRID records a position only when a player shoots, gets hit or uses an ability, so quiet moments leave "
+               f"gaps. The shaded glow is where the dots cluster. Positions are ±1–4 m. Showing {len(sight)} "
+               f"{gun} kills in the chosen time windows.")
     if seen_rounds:
         areas = shown.assign(area=nearest_callout(map_name, shown["x"], shown["y"])).dropna(subset=["area"])
         per_area = areas.drop_duplicates(["game_id", "round_num", "area"])["area"].value_counts().head(3)
@@ -130,8 +148,10 @@ with right:
         hv = holders.assign(label=holders["player_name"] + " · " + holders["agent"].str.title())
         figh = px.bar(hv.head(8), x="rounds", y="label", orientation="h", text="rounds",
                       color_discrete_sequence=[ACCENT])
-        figh.update_layout(height=260, yaxis=dict(autorange="reversed", title=None),
-                           xaxis_title=f"{gun} rounds")
+        rows = min(len(hv), 8)
+        figh.update_layout(height=60 + 30 * rows, yaxis=dict(autorange="reversed", title=None),
+                           xaxis=dict(title=f"{gun} rounds", **count_axis(hv["rounds"].head(8).max())))
+        figh.update_traces(width=0.7)
         chart(figh)
     st.subheader("When it fires")
     fb = r.first_shot_buckets()
@@ -139,7 +159,7 @@ with right:
         figt = px.bar(fb, x="bucket", y="rounds", text="rounds", color="bucket",
                       color_discrete_map=BUCKET_COLORS)
         figt.update_layout(height=230, showlegend=False, xaxis_title="first shot after buy phase",
-                           yaxis_title="rounds")
+                           yaxis=dict(title="rounds", **count_axis(fb["rounds"].max())))
         chart(figt)
         st.caption(f"{gun} fired in {of(int(fb['rounds'].sum()), r.n_gun_rounds, f'{gun} rounds')}.")
     else:

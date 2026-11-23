@@ -140,6 +140,8 @@ h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} 
 .ops-plan-n {{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:1.6rem;line-height:1;min-width:2.1rem;}}
 .ops-plan-h {{color:#fff;font-weight:600;line-height:1.35;}}
 .ops-plan-d {{color:#c3d0dc;margin-top:3px;line-height:1.4;font-size:.92rem;}}
+.ops-mapkey {{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8rem;color:#c3d0dc;margin:2px 0 6px;}}
+.ops-mapkey b {{color:#fff;}}
 .ops-meta {{color:{TEXT_FAINT};font-size:.75rem;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}}
 </style>
 """
@@ -238,6 +240,12 @@ def page_header(kicker: str, title: str, context: str) -> None:
         f'<div class="ops-stat-s" style="font-size:.8rem;color:{TEXT_DIM}">{context}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def map_key(items: list[str]) -> None:
+    """One line above a map that says what every mark means and how much data is behind it."""
+    st.markdown('<div class="ops-mapkey">' + "".join(f"<span>{i}</span>" for i in items) + "</div>",
+                unsafe_allow_html=True)
 
 
 def insight(text: str, color: str = ACCENT) -> None:

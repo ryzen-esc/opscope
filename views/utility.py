@@ -10,7 +10,7 @@ from opscope.analytics.utility import SPOT_RADIUS_CM, UtilityScope, utility_repo
 from opscope.ui.cards import insight, page_header, stat_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_points_by_category, add_spots, add_throw_lines, base_map
-from opscope.ui.theme import ACCENT, chart
+from opscope.ui.theme import ACCENT, chart, count_axis
 
 CLASSES = {"Traps & setups": ("trap",), "Recon": ("recon",), "Smokes": ("smoke",), "Stalls": ("stall",),
            "Flashes": ("flash",), "All": ()}
@@ -171,6 +171,6 @@ with right:
         tim = window.groupby("window").size().reindex(["buy phase", "0–20s", "20–40s", "40–60s", "60s+"], fill_value=0)
         figt = px.bar(tim.reset_index(name="casts"), x="window", y="casts", text="casts",
                       color_discrete_sequence=[ACCENT])
-        figt.update_layout(height=250, xaxis_title=None, yaxis_title="casts")
+        figt.update_layout(height=250, xaxis_title=None, yaxis=dict(title="casts", **count_axis(tim.max())))
         chart(figt)
         st.caption("Time after the buy phase ends. Pre-round setups (buy phase) are shown separately.")

@@ -39,27 +39,32 @@ def base_map(map_name: str, height: int = 620) -> go.Figure:
             marker=dict(symbol="square", size=30, color=BG, line=dict(color=color, width=2)),
             textfont=dict(family=MONO, color=color, size=11), hoverinfo="skip", showlegend=False,
         ))
-    pad = 0.06 * max(nx, ny) * bd.bin  # room for spawn badges at the edges
+    pad = 0.07 * max(nx, ny) * bd.bin  # room for spawn badges at the edges
     fig.update_layout(
         height=height, margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(visible=False, range=[bd.x0 - pad, bd.x0 + nx * bd.bin + pad]),
         yaxis=dict(visible=False, range=[bd.y0 - pad, bd.y0 + ny * bd.bin + pad], scaleanchor="x", scaleratio=1),
-        legend=dict(orientation="h", y=1.02, x=0),
+        legend=dict(orientation="h", y=1.0, yanchor="bottom", x=0),
         dragmode="pan",
     )
     return fig
 
 
-def add_sightlines(fig: go.Figure, df: pd.DataFrame, color: str = "rgba(242,95,92,0.45)", name: str = "Op kills") -> None:
-    """Shooter → victim line per kill; the shooter end is marked."""
+def add_sightlines(fig: go.Figure, df: pd.DataFrame, color: str = "rgba(242,95,92,0.55)", name: str = "Op kills",
+                   hover: list[str] | None = None) -> None:
+    """Shooter → victim line per kill: a ring at the shooter, an ✕ at the victim."""
     if df.empty:
         return
     xs = np.column_stack([df["ax"], df["tx"], np.full(len(df), np.nan)]).ravel()
     ys = np.column_stack([df["ay"], df["ty"], np.full(len(df), np.nan)]).ravel()
-    fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", line=dict(color=color, width=1.4),
-                             hoverinfo="skip", name=name))
-    fig.add_trace(go.Scatter(x=df["tx"], y=df["ty"], mode="markers", name="victim",
-                             marker=dict(symbol="x", size=6, color=color), hoverinfo="skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", line=dict(color=color, width=1.6),
+                             hoverinfo="skip", name=name, legendgroup="kills"))
+    fig.add_trace(go.Scatter(x=df["ax"], y=df["ay"], mode="markers", name="shooter", legendgroup="kills",
+                             marker=dict(symbol="circle-open", size=11, color=ATTACK, line=dict(width=2)),
+                             text=hover, hoverinfo="text" if hover else "skip", showlegend=False))
+    fig.add_trace(go.Scatter(x=df["tx"], y=df["ty"], mode="markers", name="victim", legendgroup="kills",
+                             marker=dict(symbol="x-thin", size=9, color=ATTACK, line=dict(width=2, color=ATTACK)),
+                             hoverinfo="skip", showlegend=False))
 
 
 def _blur(h: np.ndarray, sigma: float) -> np.ndarray:
@@ -85,8 +90,9 @@ def add_density(fig: go.Figure, df: pd.DataFrame, map_name: str, rgb: str = "0,1
     z = _blur(h, sigma_bins)
     z = z / z.max() if z.max() > 0 else z
     fig.add_trace(go.Heatmap(
-        z=np.where(z > 0.12, z, np.nan), x0=bd.x0 + bin_cm / 2, dx=bin_cm, y0=bd.y0 + bin_cm / 2, dy=bin_cm,
-        colorscale=[[0, f"rgba({rgb},0.15)"], [1, f"rgba({rgb},0.75)"]], zmin=0.12, zmax=1,
+        z=z, x0=bd.x0 + bin_cm / 2, dx=bin_cm, y0=bd.y0 + bin_cm / 2, dy=bin_cm,
+        colorscale=[[0, f"rgba({rgb},0)"], [0.12, f"rgba({rgb},0)"], [0.25, f"rgba({rgb},0.18)"],
+                    [1, f"rgba({rgb},0.7)"]], zmin=0, zmax=1,
         showscale=False, hoverinfo="skip", name="density", zsmooth="best",
     ))
 

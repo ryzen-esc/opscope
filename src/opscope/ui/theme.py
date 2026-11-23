@@ -1,6 +1,8 @@
 """One palette and one Plotly template for the whole app, so every chart and card looks like the same product."""
 from __future__ import annotations
 
+import math
+
 import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
@@ -44,10 +46,16 @@ pio.templates["opscope"].data.bar = [go.Bar(textfont=dict(family=MONO, size=11),
 pio.templates.default = "opscope"
 
 
+def count_axis(max_value: float) -> dict:
+    """Axis settings for counts: whole-number ticks only (no "0.2 rounds" on tiny samples)."""
+    step = max(1, math.ceil(max_value / 5))
+    return dict(tickformat="d", dtick=step, rangemode="tozero", range=[0, max(max_value, 1) * 1.08])
+
+
 def chart(fig: go.Figure, interactive: bool = False) -> None:
     """Show a Plotly figure with the OpScope template (Streamlit's own chart theme would override it).
 
-    interactive=True keeps zoom/pan (maps); otherwise the mode bar is hidden.
+    interactive=True (maps): scroll to zoom, drag to pan, double-click to reset. No toolbar either way.
     """
-    config = {"scrollZoom": True, "displaylogo": False} if interactive else {"displayModeBar": False}
+    config = {"scrollZoom": True, "displayModeBar": False} if interactive else {"displayModeBar": False}
     st.plotly_chart(fig, width="stretch", theme=None, config=config)
