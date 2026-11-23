@@ -11,7 +11,7 @@ from opscope.analytics.operator import Scope, _filter_rounds, league_scope, team
 from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
 from opscope.load import CLOUD9_TEAMS, cohort_label, peer_group
-from opscope.ui.cards import dossier_header, headline_card, insight_card, page_header, suggestion_card
+from opscope.ui.cards import CATEGORY_LABELS, dossier_header, headline_card, insight_card, page_header, suggestion_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import add_sites, base_map
 from opscope.ui.theme import ACCENT, ATTACK, BG, DEFENSE, NEUTRAL_BAR, chart
@@ -84,7 +84,8 @@ else:
 
 # ---- key tendencies -------------------------------------------------------------------------------
 st.subheader("Key tendencies")
-cat = st.segmented_control("Show", CATEGORIES, default="All", key="report_cat") or "All"
+cat = st.segmented_control("Show", CATEGORIES, default="All", key="report_cat",
+                           format_func=lambda c: CATEGORY_LABELS.get(c, c)) or "All"
 shown = [i for i in items if cat == "All" or i.category == cat][:9]
 if not shown:
     st.info("Nothing in this category stands out from the league with enough rounds behind it.")

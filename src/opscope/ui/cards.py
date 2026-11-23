@@ -17,6 +17,12 @@ from opscope.ui.theme import (ACCENT, AMBER, ATTACK, BORDER, DEFENSE, GOOD, PANE
 TONES = {"neutral": TEXT, "good": GOOD, "bad": ATTACK, "accent": ACCENT, "amber": AMBER}
 CATEGORY_COLORS = {"Operator": ATTACK, "Utility": ACCENT, "Attack": AMBER}
 CATEGORY_ICONS = {"Operator": "◎", "Utility": "◆", "Attack": "▲"}
+# What each insight category is about, in a coach's words ("Operator" covers Operator, Odin, Outlaw and Marshal).
+CATEGORY_LABELS = {"Operator": "Gun choice", "Utility": "Utility habit", "Attack": "Plant site"}
+
+
+def category_tag(category: str) -> str:
+    return f"{CATEGORY_ICONS.get(category, '')} {CATEGORY_LABELS.get(category, category)}"
 SIDE_BADGES = {"attack": ("ATK", ATTACK), "defense": ("DEF", DEFENSE)}
 
 
@@ -187,7 +193,7 @@ def headline_card(ins, kicker: str = "#1 thing to know", sentence: str | None = 
         f'<span class="ops-sample">{ins.sample}</span>'
         f'<span class="ops-ctx" style="margin-left:auto">{peer}</span></div>'
         f'{evidence_bar(ins.k, ins.n, lr, color, getattr(ins, "peers", "typical"))}'
-        f'<div class="ops-meta">{side_badge(side)}<span>{CATEGORY_ICONS.get(ins.category, "")} {ins.category}</span>'
+        f'<div class="ops-meta">{side_badge(side)}<span>{category_tag(ins.category)}</span>'
         f'<span>· {ins.map.title()}</span><span>· bar: shaded = 95% range, grey tick = comparison</span></div></div>',
         unsafe_allow_html=True,
     )
@@ -204,7 +210,7 @@ def insight_card(ins) -> None:
     st.markdown(
         f'<div class="ops-card ops-cut" style="border-left:3px solid {color}">'
         f'<div class="ops-title" style="display:flex;gap:6px;align-items:center">'
-        f'<span style="color:{color}">{CATEGORY_ICONS.get(ins.category, "")} {ins.category}</span>'
+        f'<span style="color:{color}">{category_tag(ins.category)}</span>'
         f'<span>· {ins.map.title()}</span><span style="margin-left:auto">{side_badge(side)}</span></div>'
         f'<div style="color:{TEXT};margin:8px 0 4px 0;line-height:1.42;font-size:.93rem">{ins.text}</div>'
         f'{evidence_bar(ins.k, ins.n, lr, color, getattr(ins, "peers", "typical"))}'
@@ -224,7 +230,7 @@ def suggestion_card(s, number: int, self_scout: bool = False) -> None:
         f'<div class="ops-plan-n" style="color:{color}">{number:02d}</div>'
         f'<div style="min-width:0"><div class="ops-plan-h">{s.headline}</div>'
         f'<div class="ops-plan-d">{s.detail}</div>'
-        f'<div class="ops-meta">{badge}<span>{CATEGORY_ICONS.get(ins.category, "")} {ins.category}</span>'
+        f'<div class="ops-meta">{badge}<span>{category_tag(ins.category)}</span>'
         f'<span>· {ins.map.title()}</span><span>· {ins.sample}</span></div>'
         f'</div></div>',
         unsafe_allow_html=True,
