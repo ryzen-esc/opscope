@@ -287,6 +287,7 @@ def habit_insights(s: Scope, min_share: float = 0.6) -> list[Insight]:
                          f"in the same spot{where} on {SIDE_WORD[side]} on <b>{m.title()}</b>: <b>{of(k, n, 'rounds on ' + row['agent'].title())}</b> "
                          f"(typical {who_lg} player: {lg_share:.0%} in their usual spot).",
                     k=k, n=n, unit=f"rounds on {row['agent'].title()}", score=sc,
+                    peers=f"typical {who_lg} player", baseline=lg_share,
                     tags={"player": row["player_name"], "player_id": str(row["player_id"]),
                           "ability": row["ability"], "x": row["x"], "y": row["y"],
                           "util_class": row["util_class"], "area": area if isinstance(area, str) else None}))
