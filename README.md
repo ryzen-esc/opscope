@@ -29,7 +29,7 @@ Filters for team, opponent, map, side, patch and event apply everywhere. Each te
 Requires Python 3.14 and [uv](https://docs.astral.sh/uv/). The match data is licensed for the hackathon and **is not in this repository**; you clone it yourself next to this project.
 
 ```bash
-git clone <this repo> opscope
+git clone https://github.com/ryzen-esc/opscope.git
 git clone --filter=blob:none --sparse https://github.com/cloud9esports/stl-hackathon-2026-grid-starter.git
 cd stl-hackathon-2026-grid-starter && git sparse-checkout set val val-ability-supplements meta && cd ..
 cd opscope
