@@ -2,6 +2,8 @@
 import { reduced } from "./motion.js";
 
 const pct = (v) => `${Math.round(v * 100)}%`;
+/** Keep a label inside the bar when its value sits near either end. */
+const edge = (v) => (v < 0.1 ? "transform:translateX(-4px)" : v > 0.9 ? "transform:translateX(calc(-100% + 4px))" : "");
 
 /**
  * ev: {rate, lo, hi, base, k, n}. opts: {side: "attacker"|"defender", labels: true, baseLabel: "typical"}.
@@ -19,8 +21,8 @@ export function evidenceBar(ev, { side = "defender", labels = true, baseLabel = 
       ((rate - ev.lo) / Math.max(ev.hi - ev.lo, 1e-6)) * 100}% 50%"></div>
     ${ev.base != null ? `<div class="tick" style="left:${ev.base * 100}%"></div>` : ""}
     <div class="dot" style="left:${rate * 100}%"></div>
-    ${labels ? `<div class="lab rate" style="left:${rate * 100}%">${pct(rate)}</div>` : ""}
-    ${labels && ev.base != null ? `<div class="lab base" style="left:${ev.base * 100}%">${baseLabel} ${pct(ev.base)}</div>` : ""}`;
+    ${labels ? `<div class="lab rate" style="left:${rate * 100}%;${edge(rate)}">${pct(rate)}</div>` : ""}
+    ${labels && ev.base != null ? `<div class="lab base" style="left:${ev.base * 100}%;${edge(ev.base)}">${baseLabel} ${pct(ev.base)}</div>` : ""}`;
   const q = (s) => node.querySelector(s);
   function play(delay = 0) {
     if (reduced) return;

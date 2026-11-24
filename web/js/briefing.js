@@ -105,6 +105,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     const geo = await api.map(name);
     if (t !== token) return null;
     if (mapName !== name) {
+      tip.hide();
       map = drawMap(ui.svg, geo, { floor: "#111c28" });
       mapName = name;
       map.drawIn(1000);

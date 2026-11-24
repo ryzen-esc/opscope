@@ -327,3 +327,66 @@ body.board .progress { display: none }
 .site { position: relative; padding-bottom: 14px }
 .site .lgl { position: absolute; top: 34px; transform: translateX(-50%); font: 10px var(--mono); color: var(--dim); white-space: nowrap }
 .row .i small { display: block; font: 600 9px var(--mono); letter-spacing: .14em; color: var(--faint) }
+
+/* ---- Operator tab ------------------------------------------------------------------------------------ */
+.rail-loading { padding: 40px 20px; color: var(--dim); font: 12px var(--mono); letter-spacing: .14em; text-transform: uppercase }
+.op-head { padding: 14px 20px 0 }
+.seg.wide { display: flex } .seg.wide button { flex: 1 }
+.blk { padding: 16px 20px; border-bottom: 1px solid var(--line) }
+.blk .k { font: 600 10.5px var(--mono); letter-spacing: .14em; color: var(--def); text-transform: uppercase }
+.blk h4 { font: 600 10.5px var(--mono); letter-spacing: .14em; color: var(--dim); text-transform: uppercase; margin-bottom: 10px;
+  display: flex; justify-content: space-between; gap: 8px }
+.blk h4 span { color: var(--faint); letter-spacing: .04em; text-transform: none; font-weight: 400 }
+.bigrow { display: flex; align-items: flex-end; gap: 14px; margin-top: 8px }
+.bigrow .big { font: 900 64px/0.9 var(--disp); color: var(--def); font-variant-numeric: tabular-nums }
+.bigrow .of { font: 12px/1.5 var(--mono); color: var(--dim) } .bigrow .peer { color: var(--faint) }
+.glance { font-size: 13px; color: #c9d3dd; margin-top: 10px; line-height: 1.45 } .glance b { color: #fff }
+.hint { font-size: 11.5px; color: var(--faint); margin-top: 8px }
+.bymap, .holders { list-style: none }
+.bymap li, .holders li { display: grid; grid-template-columns: 82px 1fr 52px; gap: 10px; align-items: center; font: 12px var(--mono);
+  color: var(--dim); padding: 4px 6px; margin: 0 -6px; border-radius: 4px }
+.bymap li { cursor: pointer } .bymap li:hover { background: rgba(255, 255, 255, .04) } .bymap li.on { background: var(--panel2); color: #fff }
+.bymap li > span:last-child, .holders li > span:last-child { text-align: right }
+.holders li { grid-template-columns: 120px 1fr 36px } .holders small { color: var(--faint) }
+.mbar { position: relative; display: block; width: 100%; min-width: 0; height: 6px; background: rgba(255, 255, 255, .06); border-radius: 2px }
+.mbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--def); border-radius: 2px }
+.mbar em { position: absolute; top: -4px; bottom: -4px; width: 1.5px; background: #c9d3dd }
+.fs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; height: 110px; align-items: end }
+.fs div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font: 11px var(--mono); color: var(--dim) }
+.fs .col { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px } .fs b { color: #fff; margin-top: 4px } .fs small { color: var(--faint) }
+.blk.two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px }
+.wr { font: 12px var(--mono); color: var(--dim) } .wr b { font: 800 24px var(--disp); color: #fff; margin-right: 6px }
+.stagenote.amber { color: var(--amb); border-color: rgba(245, 180, 60, .5) }
+
+.live { position: absolute; right: 18px; top: 16px; width: min(320px, 40%); background: rgba(13, 18, 24, .88); backdrop-filter: blur(14px);
+  border: 1px solid var(--line2); border-radius: 10px; padding: 14px 16px; z-index: 3; opacity: 0; transform: translateX(20px);
+  transition: opacity .4s var(--ease), transform .4s var(--ease); pointer-events: none }
+.live.in { opacity: 1; transform: none; pointer-events: auto }
+.live .k { font: 600 10.5px var(--mono); letter-spacing: .12em; color: var(--dim); text-transform: uppercase }
+.live .seen { font: 12px var(--mono); color: var(--dim); margin: 8px 0 10px } .live .seen b { color: #fff; font-size: 15px }
+.live ol { list-style: none } .live li { display: grid; grid-template-columns: 1fr 64px 62px; gap: 10px; align-items: center; font-size: 12.5px; padding: 3px 0 }
+.live li span:last-child { text-align: right; font: 11px var(--mono); color: #c9d3dd }
+.live p { font-size: 12px; color: var(--dim) } .live .fine { font-size: 11px; color: var(--faint); margin-top: 10px }
+.dot circle:last-child { cursor: crosshair }
+
+/* ---- timeline ----------------------------------------------------------------------------------------- */
+.strip.tl { gap: 18px; padding: 10px 20px }
+.tl-play { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line2); background: var(--panel2); color: #fff; cursor: pointer;
+  display: grid; place-items: center; flex: none; transition: border-color .2s, transform .2s var(--ease) }
+.tl-play:hover { border-color: var(--def); transform: scale(1.05) }
+.tl-clock { width: 82px; flex: none } .tl-clock .tl-t { font: 700 24px var(--mono); font-variant-numeric: tabular-nums; display: block; line-height: 1 }
+.tl-clock small { font: 600 9px var(--mono); letter-spacing: .14em; color: var(--faint); text-transform: uppercase }
+.tl-track { position: relative; flex: 1; height: 46px; cursor: pointer; touch-action: none; outline-offset: 4px }
+.tl-segs { position: absolute; left: 0; right: 0; top: 20px; height: 6px }
+.tl-seg { position: absolute; top: 0; bottom: 0; background: var(--c); opacity: .22; border-radius: 3px; transition: opacity .3s }
+.tl-seg.on { opacity: .55 }
+.tl-seg span { position: absolute; top: -17px; left: 2px; font: 10px var(--mono); color: var(--faint); white-space: nowrap; opacity: 1 }
+.tl-fill { position: absolute; left: 0; top: 20px; height: 6px; background: linear-gradient(90deg, rgba(255,255,255,.0), rgba(255,255,255,.18)); border-radius: 3px; pointer-events: none }
+.tl-ticks i { position: absolute; top: 30px; width: 2px; height: 9px; margin-left: -1px; background: var(--atk); border-radius: 1px }
+.tl-head { position: absolute; top: 10px; width: 2px; height: 26px; margin-left: -1px; background: #fff; box-shadow: 0 0 12px rgba(255,255,255,.7); pointer-events: none }
+.tl-head span { position: absolute; left: -5px; top: -5px; width: 12px; height: 12px; border-radius: 50%; background: #fff }
+.tl-side { display: flex; flex-direction: column; gap: 6px; flex: none }
+.tl-speeds, .tl-modes { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.tl-speeds button, .tl-modes button { background: none; border: 0; color: var(--dim); font: 600 11px var(--mono); padding: 4px 9px; cursor: pointer }
+.tl-speeds button + button, .tl-modes button + button { border-left: 1px solid var(--line) }
+.tl-speeds button.on, .tl-modes button.on { background: var(--panel2); color: #fff }

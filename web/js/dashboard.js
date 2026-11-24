@@ -2,38 +2,15 @@
 // rail / stage / bottom-strip layout each tab draws into. Tab state lives in the URL (replaceState, no reload).
 import { api } from "./api.js";
 import { renderBriefing } from "./briefing.js";
+import { renderOperator } from "./operator.js";
 import { lenisStart, lenisStop } from "./motion.js";
 import { esc } from "./overview.js";
+import { segment, tooltip } from "./ui.js";
 
 const SOON = '<i class="tsoon">soon</i>';
-const TABS = [["briefing", "Briefing"], ["operator", `Operator${SOON}`], ["utility", `Utility${SOON}`], ["pool", `Map pool${SOON}`]];
+const TABS = [["briefing", "Briefing"], ["operator", "Operator"], ["utility", `Utility${SOON}`], ["pool", `Map pool${SOON}`]];
 const SIDES = [["both", "Both"], ["attacker", "Attack"], ["defender", "Defense"]];
 const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
-
-/** A segmented control with a sliding indicator. */
-function segment(host, options, current, onPick, cls = "") {
-  host.className = `seg ${cls}`;
-  host.innerHTML = `<div class="ind"></div>` + options.map(([k, l]) => `<button type="button" data-k="${k}">${l}</button>`).join(""); // labels are trusted constants
-  const ind = host.querySelector(".ind");
-  const set = (k) => {
-    host.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === k));
-    const b = host.querySelector(`button[data-k="${k}"]`);
-    if (b) { ind.style.left = `${b.offsetLeft}px`; ind.style.width = `${b.offsetWidth}px`; }
-  };
-  host.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { set(b.dataset.k); onPick(b.dataset.k); }));
-  requestAnimationFrame(() => set(current));
-  set(current);
-  return set;
-}
-
-function tooltip() {
-  const t = document.createElement("div");
-  t.className = "tip";
-  document.body.appendChild(t);
-  const move = (e) => { t.style.left = `${Math.min(e.clientX + 14, innerWidth - 300)}px`; t.style.top = `${e.clientY + 14}px`; };
-  return { show: (e, html) => { t.innerHTML = html; t.classList.add("on"); move(e); }, move, hide: () => t.classList.remove("on"),
-    remove: () => t.remove() };
-}
 
 export async function renderDashboard(app, { meta, team, filters, params, setParams, navigate }) {
   document.body.classList.add("board");
@@ -59,6 +36,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
       <div class="hud" id="hud"></div>
       <div class="legend" id="legend"></div>
       <div class="stagenote" id="stagenote"></div>
+      <div class="live" id="live" data-lenis-prevent></div>
       <div class="ecard" id="ecard" data-lenis-prevent></div>
       <div class="zoomctl"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button></div>
     </section>
@@ -68,7 +46,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   const $ = (s) => app.querySelector(s);
   const ui = {
     rail: $("#rail"), svg: $("#bmap"), hud: $("#hud"), legend: $("#legend"), card: $("#ecard"), strip: $("#strip"), stage: $("#bstage"),
-    note: $("#stagenote"),
+    note: $("#stagenote"), live: $("#live"),
     _map: null, _side: null, _zoom: null,
     onMap(fn) { this._map = fn; }, onSide(fn) { this._side = fn; }, zoom(fn) { this._zoom = fn; },
   };
@@ -81,13 +59,25 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   // ---- map chips: maps this team played, with how many tendencies each has ----
   const perMap = Object.fromEntries(rep.pool.map((p) => [p.map, rep.insights.filter((i) => i.map === p.map).length]));
   const chips = $("#mapchips");
-  const setChip = (m) => chips.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
+  const setChip = (m) => chips.querySelectorAll("button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.m === m);
+    if (b.dataset.m === m) chips.scrollTo({ left: b.offsetLeft - chips.offsetWidth / 2 + b.offsetWidth / 2, behavior: "smooth" });
+  });
   chips.innerHTML = `<button type="button" data-m="">All maps</button>` + rep.pool.map((p) => `<button type="button" data-m="${p.map}"
     class="${perMap[p.map] ? "has" : ""}" title="${p.games} maps played">${esc(title(p.map))}${perMap[p.map] ? `<sup>${perMap[p.map]}</sup>` : ""}</button>`).join("");
   chips.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { setChip(b.dataset.m); ui._map?.(b.dataset.m); }));
   setChip(params.get("map") || "");
 
-  segment($("#sides"), SIDES, params.get("side") || "both", (k) => ui._side?.(k), "small");
+  ui.setSide = segment($("#sides"), SIDES, params.get("side") || "both", (k) => ui._side?.(k), "small");
+  ui.setMap = (m) => setChip(m || "");
+  const chipBadges = (badges) => chips.querySelectorAll("button[data-m]").forEach((b) => {
+    if (!b.dataset.m) return;
+    const v = badges ? badges[b.dataset.m] : perMap[b.dataset.m];
+    b.querySelector("sup")?.remove();
+    if (v) b.insertAdjacentHTML("beforeend", `<sup>${esc(String(v))}</sup>`);
+    b.classList.toggle("has", !!v);
+  });
+  ui.setBadges = chipBadges;
 
   // When filters are on, say so where the numbers are read, with a way out.
   const fnames = [
@@ -102,6 +92,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   // ---- tabs ----
   function showTab(k) {
     disposeTab();
+    tip.hide();
     tab = k;
     setParams({ tab: k === "briefing" ? null : k });
     ui.card.classList.remove("in");
@@ -109,13 +100,21 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
     ui.note.classList.remove("on");
     ui.legend.innerHTML = "";
     ui._map = ui._side = ui._zoom = null;
+    ui.note.classList.remove("amber");
+    ui.live.classList.remove("in");
+    ui.strip.className = "strip";
+    if (k === "operator") {
+      ui.rail.scrollTop = 0;
+      disposeTab = renderOperator(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip });
+      return;
+    }
     if (k === "briefing") {
+      ui.setSide(new URLSearchParams(location.search).get("side") || "both");
       ui.legend.innerHTML = `<span><i class="dia" style="--c:var(--def)"></i>Utility habit spot</span><span><i style="--c:transparent;border:2px solid var(--def)"></i>Gun choice, usual area</span>
         <span><i class="zone"></i>Bomb site · their plant count</span><span style="color:var(--faint)">Blue = defense, red = attack</span>`;
       disposeTab = renderBriefing(ui, { rep, params: new URLSearchParams(location.search), setParams, tip, goTab, filterBanner });
     } else {
-      const names = { operator: ["Operator profiler", "Step 5: who holds it, where, and the round-by-round timeline."],
-        utility: ["Utility profiler", "Step 6: where utility goes, habit spots and landings, on the timeline."],
+      const names = { utility: ["Utility profiler", "Step 6: where utility goes, habit spots and landings, on the timeline."],
         pool: ["Map pool", "Step 7: every map with attack and defense win rates."] };
       ui.rail.innerHTML = `<div class="tab-soon"><div><div class="kicker">Next build steps</div><h3>${names[k][0]}</h3><p>${names[k][1]}</p></div></div>`;
       ui.svg.innerHTML = ""; ui.hud.innerHTML = ""; ui.strip.innerHTML = "";
