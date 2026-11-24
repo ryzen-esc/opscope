@@ -72,14 +72,12 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     const list = st.view === "land" ? m().habits_landing : m().habits;
     return list.filter((h) => h.strong && mine(h) && !st.hidden.has(h.ability)).slice(0, 5);
   };
-  /** Players with casts on this map, busiest first, with the agents they cast from. */
+  /** Everyone who played this map (most rounds first), with their agents and how many of the selected casts they made. */
   const playersHere = () => {
-    const by = new Map();
-    for (const c of m().casts) {
-      const p = by.get(c.player) || { player: c.player, agents: new Set(), n: 0 };
-      p.agents.add(c.agent); p.n++; by.set(c.player, p);
-    }
-    return [...by.values()].sort((a, b) => b.n - a.n);
+    const casts = countBy(m().casts, (c) => c.player);
+    const list = (m().players || []).map((p) => ({ player: p.player, agents: p.agents.map((a) => a.agent), n: casts[p.player] || 0 }));
+    for (const [player, n] of Object.entries(casts)) if (!list.some((p) => p.player === player)) list.push({ player, agents: [], n });
+    return list.sort((a, b) => (b.n > 0) - (a.n > 0) || b.n - a.n);
   };
   function togglePlayer(name) {
     if (name == null) st.players.clear();
@@ -112,8 +110,10 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
         <div class="toggles"><label><input type="checkbox" id="taim" ${aimOn() ? "checked" : ""}> Aim direction</label>
           <label><input type="checkbox" id="tspots" ${st.spots ? "checked" : ""}> Habit spots</label></div>
         <div class="pchips" role="group" aria-label="Players"><button type="button" data-p="" class="${st.players.size ? "" : "on"}">Whole team</button>${
-          plist.map((p) => `<button type="button" data-p="${esc(p.player)}" class="${st.players.has(p.player) ? "on" : ""}"
-            title="${p.n} casts on ${esc([...p.agents].map(title).join(", "))}">${esc(p.player)} <small>${esc([...p.agents].map(title).join(", "))}</small></button>`).join("")}</div></div>
+          plist.map((p) => p.n ? `<button type="button" data-p="${esc(p.player)}" class="${st.players.has(p.player) ? "on" : ""}"
+            title="${p.n} casts on ${esc(p.agents.map(title).join(", "))}">${esc(p.player)} <small>${esc(p.agents.map(title).join(", "))}</small></button>`
+            : `<button type="button" class="none" disabled title="Played ${esc(p.agents.map(title).join(", "))} on ${esc(title(st.map))}: no ${esc(CLASS_LONG[st.cls])} recorded">
+              ${esc(p.player)} <small>${esc(p.agents.map(title).join(", "))} · no ${esc(CLASS_LONG[st.cls])} here</small></button>`).join("")}</div></div>
       <section class="blk">
         <div class="k">${esc(title(CLASS_LONG[st.cls]))} · ${esc(title(st.map))} · ${esc(unit)} · ${st.players.size ? esc([...st.players].join(", ")) : esc(data.name)}</div>
         <h4 style="margin-top:12px">Habits <span>same spot within 4 m, in 40%+ of rounds on the agent</span></h4>

@@ -431,6 +431,15 @@ def utility(scope: UtilityScope) -> dict:
                                                   tab["casts"], tab["rounds"])],
         }
         per_map[m]["who"].sort(key=lambda x: x["casts"], reverse=True)
+        # Everyone who played this map in scope (with the agents and rounds), cast or not, so the page can show the
+        # full roster and say who had none of this utility.
+        names = _player_names()
+        roster: dict[str, dict] = {}
+        for (pid, agent), n in sorted(ar.items(), key=lambda kv: -kv[1]):
+            e = roster.setdefault(pid, {"player": names.get(pid, pid), "agents": [], "rounds": 0})
+            e["agents"].append({"agent": agent, "rounds": int(n)})
+            e["rounds"] += int(n)
+        per_map[m]["players"] = sorted(roster.values(), key=lambda e: -e["rounds"])
     val = landing_model()["validation"]
     return {"team": scope.team_id, "name": team_name(scope.team_id), "side": scope.side, "unit": unit, "empty": False,
             "classes": list(scope.classes), "phases": list(scope.phases),

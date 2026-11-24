@@ -437,3 +437,4 @@ body.board .progress { display: none }
 .pchips button.on { background: var(--def); border-color: var(--def); color: #001018 } .pchips button.on small { color: rgba(0, 16, 24, .65) }
 .who .pl { background: none; border: 0; color: #fff; font: inherit; cursor: pointer; padding: 0; text-decoration: underline dotted rgba(255,255,255,.3) }
 .who .pl:hover { color: var(--def) }
+.pchips button.none { border-style: dashed; color: var(--faint); cursor: default } .pchips button.none:hover { color: var(--faint) }
