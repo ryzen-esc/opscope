@@ -15,7 +15,7 @@ How OpScope turns raw match events into scouting, what each number means, how it
 |---|---|
 | Who owns which gun | Every player's inventory in the full game state at the end of the buy phase (and at round end) |
 | Side per round | The round segment's team sides at freeze end (the per-game summary only gives the final side) |
-| Positions | Only on events: a player's position is attached when they shoot, get hit, cast, plant or defuse. There is **no continuous movement stream**, and these positions are periodic samples (±1–4 m). |
+| Positions | Only on events: a player's position is attached when they deal damage, take damage, cast, plant or defuse. Missed shots aren't recorded. There is **no continuous movement stream**, and these positions are periodic samples (±1–4 m). |
 | Cast position and aim | The ability supplement, interpolated from movement samples taken 5 times a second (once a second in VCT Americas 2025). It matches 99.8% of casts. |
 | Mid-round weapon pickups | Not recorded (only the spike). Inferred when a player who didn't own a gun deals damage with it. |
 | Where utility lands | Not recorded. Estimated for damaging utility (section 6). |
@@ -50,7 +50,7 @@ Every claim carries its sample: **"k of n rounds"**.
 - **Ownership:** the primary weapon in each player's inventory at the end of the buy phase. Operator, Odin, Outlaw and Marshal are profiled separately.
 - **Survived with it:** the holder is alive at round end with the gun still in their inventory.
 - **Changed hands:** someone fired the gun who didn't buy it.
-- **Where it sits:** every recorded position of the holder in those rounds (when they shot, got hit or cast), shown as a density with 3 m bins and a blur, filtered by time since the buy phase. Positions are sparse: the median first sighting of an Op holder is 32 s into the round, so the map always says how many rounds it covers.
+- **Where it sits:** every recorded position of the holder in those rounds (when they dealt damage, took damage or cast an ability, with whatever weapon they had in hand), shown as a density with 3 m bins and a blur, filtered by time since the buy phase. Positions are sparse: the median first sighting of an Op holder is 32 s into the round, so the map always says how many rounds it covers.
 - **Setup style:** the holder's first position within 30 s, scored `d_def / (d_def + d_atk)`, where `d_def` and `d_atk` are distances to the median defender and attacker spawn. This works on three-site maps, where a single spawn-to-spawn axis would not. The team's median is ranked against other teams' setups (same tier and season) on that map and side.
 - **Kill sightlines:** each kill with the gun is drawn from shooter to victim.
 

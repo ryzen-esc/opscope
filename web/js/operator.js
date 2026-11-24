@@ -21,6 +21,8 @@ const timeColor = (t) => (TIME.find((b) => t < b.to) || TIME[3]).color;
 const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 const pct = (v) => `${Math.round(v * 100)}%`;
 const MOMENT = 5; // seconds a dot stays visible in Moment mode
+// What put a dot on the map. GRID has no record of missed shots or of movement, only these three.
+const VIA = { shot: "dealt damage", hit: "took damage", cast: "used an ability" };
 const MIN_SAMPLE = 8;
 
 function wilson(k, n) {
@@ -129,16 +131,17 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     map.drawIn(900);
     const side = data.side === "attacker" ? "attack" : data.side === "defender" ? "defense" : "both sides";
     ui.hud.innerHTML = `<b>${esc(title(st.map))}</b><span>${esc(data.gun)} · ${esc(side)} · ${m.gun_rounds} of ${m.rounds} rounds with it</span>`;
-    ui.legend.innerHTML = TIME.map((b) => `<span><i style="--c:${b.color}"></i>${b.label}</span>`).join("")
-      + `<span><i style="--c:transparent;border:2px solid ${COLORS.atk}"></i>${esc(data.gun)} kill: shooter → ✕ victim</span>`;
+    ui.legend.innerHTML = `<span style="color:var(--ink)" title="The holder dealt damage, took damage or used an ability: the only moments GRID records a position.">Dot = damage dealt / taken or ability, at</span>`
+      + TIME.map((b) => `<span><i style="--c:${b.color}"></i>${b.label}</span>`).join("")
+      + `<span><i style="--c:transparent;border:2px solid ${COLORS.atk}"></i>${esc(data.gun)} kill → ✕</span>`;
     layer = { dots: [], kills: [] };
     for (const p of m.positions) {
       const g = el("g", { opacity: 0, class: "dot" }, map.layers.data);
       el("circle", { cx: p.at[0], cy: p.at[1], r: 15, fill: timeColor(p.t), opacity: .1 }, g);
       const core = el("circle", { cx: p.at[0], cy: p.at[1], r: 4.5, fill: timeColor(p.t), stroke: COLORS.bg, "stroke-width": 1,
         "vector-effect": "non-scaling-stroke" }, g);
-      core.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) · ${clockLabel(p.t)}<br>
-        ${p.area ? `near <b>${esc(p.area)}</b> · ` : ""}${esc(p.via)} · round ${p.round + 1}`));
+      core.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) ${esc(VIA[p.via] || p.via)}
+        at ${clockLabel(p.t)}${p.area ? ` near <b>${esc(p.area)}</b>` : ""}<br><span style="color:var(--dim)">With whatever they had in hand, not necessarily the ${esc(data.gun)}.</span>`));
       core.addEventListener("mousemove", (e) => tip.move(e));
       core.addEventListener("mouseleave", () => tip.hide());
       layer.dots.push({ g, p, shown: -1 });
@@ -202,7 +205,8 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
       <div class="seen"><b>${seen.size}</b> of ${m.gun_rounds} ${esc(data.gun)} rounds seen · <b>${kills}</b> kill${kills === 1 ? "" : "s"}</div>
       ${top.length ? `<ol>${top.map(([a, n]) => `<li><span>${esc(a)}</span><span class="mbar"><i style="width:${(n / Math.max(1, seen.size)) * 100}%"></i></span>
         <span>${n} of ${seen.size}</span></li>`).join("")}</ol>` : `<p>No recorded moments yet.</p>`}
-      <p class="fine">GRID records a position only when the holder shoots, gets hit or uses an ability (±1–4 m), so quiet rounds leave gaps.</p>` : "";
+      <p class="fine">A round counts as seen when the holder dealt damage, took damage or used an ability (with any weapon), the only
+        moments GRID records a position (±1–4 m). Missed shots and quiet holds leave no dot.</p>` : "";
     ui.live.classList.toggle("in", !!m.gun_rounds);
     ui.stage.classList.toggle("carded", !!m.gun_rounds);
   }

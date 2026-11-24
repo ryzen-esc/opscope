@@ -29,7 +29,7 @@ Every number shows its sample ("30 of 80 rounds"). Teams are compared only with 
 
 ## Challenges we ran into
 - **Silent data errors:** 35 maps came out one round long until we found that GRID corrects itself with rollback events (undo newest-first, new IDs).
-- **Sparse positions:** positions only exist when a player shoots, gets hit or uses an ability, so every map view states how many rounds it covers.
+- **Sparse positions:** positions only exist when a player deals damage, takes damage or uses an ability (missed shots aren't recorded), so every map view states how many rounds it covers.
 - **Fair comparisons:** VCT 2025 and Game Changers 2026 play different metas, and rosters change mid-season. Comparisons are now within tier and season, and tendencies of departed players are flagged.
 - **"True but useless" insights:** a Viper wall placed in the same spot in 70 of 71 rounds is standard play. Habits had to be compared with the league too.
 - **No landing data:** we built ground truth from who damaging utility hurt, and only ship estimates where that check exists.

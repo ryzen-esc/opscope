@@ -168,6 +168,26 @@ routes = [
 ]
 
 
+class NoStaleAssets:
+    """Ask browsers to revalidate the front end's files on every load (cheap: unchanged files answer 304), so an
+    updated app never runs with yesterday's CSS or JS."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["path"].startswith("/api/"):
+            return await self.app(scope, receive, send)
+
+        async def send_with_header(message):
+            if message["type"] == "http.response.start":
+                message.setdefault("headers", [])
+                message["headers"] = [h for h in message["headers"] if h[0].lower() != b"cache-control"]
+                message["headers"].append((b"cache-control", b"no-cache"))
+            await send(message)
+        await self.app(scope, receive, send_with_header)
+
+
 def create_app(static_dir=None) -> Starlette:
     """The API, plus the web front end from `static_dir` when given."""
     all_routes = list(routes)
@@ -175,4 +195,4 @@ def create_app(static_dir=None) -> Starlette:
         from starlette.routing import Mount
         from starlette.staticfiles import StaticFiles
         all_routes.append(Mount("/", StaticFiles(directory=static_dir, html=True), name="web"))
-    return Starlette(routes=all_routes, middleware=[Middleware(GZipMiddleware, minimum_size=2000)])
+    return Starlette(routes=all_routes, middleware=[Middleware(GZipMiddleware, minimum_size=2000), Middleware(NoStaleAssets)])

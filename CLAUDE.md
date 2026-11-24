@@ -98,7 +98,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - `zones.py`: bomb sites (k-means on 28,952 plants) + `nearest_callout` (a site centre within 8 m wins, else the nearest callout within 25 m). valorant-api.com uses the **same x/y as GRID**.
 - **New web app (redesign in progress, Nov 23):** `present.py` builds each page's JSON (report, operator, utility, meta, team filters; positions/kills/casts carry view-frame `at`, time `t` (negative = buy phase) and a round index for the timeline). `api.py` serves it (Starlette, gzip; list filters repeat the param, `side` = attacker/defender/both; missing cache → 503 with setup steps). `server.py`: `uv run opscope` serves `web/` + the API on 127.0.0.1:8000. Preview config `opscope-web`. Plan: overview story → dashboard with a scrubbable timeline; Streamlit is retired once the new site covers everything.
 - `geometry.py`: the official minimap frame (`to_minimap`, `to_view`), traced minimap layers (`map_geometry`: floor rings, props, site zones, spawns, sites, callouts) with a data-drawn fallback. `maps.py`: old data-drawn backdrop (Streamlit), spawns, aggression. `ui/`: minimap layers, cards, sidebar filters.
-- **Positions only exist at events** (shots, hits, casts, plants), ±1–4 m. Always state coverage ("seen in k of n rounds").
+- **Positions only exist at events** (dealing damage, taking damage, ability casts, plants; GRID has no missed shots or movement), ±1–4 m. Always state coverage ("seen in k of n rounds").
 
 ## Gotchas
 - `df.map` is the DataFrame method: always write `df["map"]`.

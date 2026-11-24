@@ -35,6 +35,7 @@ def test_static_front_end_is_served(tmp_path):
     (tmp_path / "index.html").write_text("<p>hi</p>")
     r = TestClient(create_app(tmp_path)).get("/")
     assert r.status_code == 200 and "hi" in r.text
+    assert r.headers["cache-control"] == "no-cache"  # browsers recheck the app's files, so updates show up
 
 
 # ---- against the real local cache (skipped where it hasn't been built) --------------------------------

@@ -58,7 +58,7 @@ with st.expander("Operator profiler", expanded=True):
   "Survived with it" uses the inventory at round end.
 - **Changing hands:** pickups aren't recorded, so a pickup is inferred when someone who didn't buy the gun
   deals damage with it.
-- **Where it sits:** GRID records a player's position only when they shoot, get hit or use an ability, about
+- **Where it sits:** GRID records a player's position only when they deal damage, take damage or use an ability (missed shots aren't recorded), about
   ±1–4 m. Quiet rounds leave gaps, so the map shows a density of every recorded position, filtered by time in
   the round, and always says how many rounds it covers.
 - **Setup style:** the first position in the first 30 s, scored from 0 (defender spawn) to 1 (attacker spawn)
