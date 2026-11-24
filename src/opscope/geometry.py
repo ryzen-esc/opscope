@@ -2,7 +2,8 @@
 
 Outlines are traced from the official minimap images (valorant-api.com `displayIcon`), downloaded on first
 use into the gitignored data cache: the repo never contains Riot's art or a copy of it. Without network access
-the outline falls back to one drawn from the match data (below), so the app still works offline.
+the outline falls back to one drawn from the match data (below), so the app still works offline; that
+fallback is kept in memory only, so the next run tries the download again.
 
 GRID positions and the official minimap use the same game units but different axes: valorant-api.com
 (/v1/maps) gives four numbers per map that place a game position on the minimap,
@@ -40,8 +41,9 @@ BLUR_THRESHOLD = 0.35  # ...and this cut decides where the smoothed floor ends
 MIN_PART_CELLS = 120  # floor patches smaller than this (~30 m²) are dropped; wall blocks smaller are filled
 RDP_EPS_CELLS = 2.0   # simplification tolerance (1 m)
 SNAP_DEG = 13         # snap a wall to the nearest 45° step when it is this close
-GEOMETRY_VERSION = 5
+GEOMETRY_VERSION = 6  # bump when the tracing or the payload changes (6: bbox covers spawns and sites)
 MAPS_API = "https://valorant-api.com/v1/maps"
+TRACED = "official minimap (traced)"
 ICON_PX = 1024
 
 
@@ -283,6 +285,8 @@ def _positions(map_name: str) -> tuple[np.ndarray, np.ndarray]:
 def floor_rings(map_name: str, x: np.ndarray, y: np.ndarray) -> list[list[list[float]]]:
     """Positions -> straightened floor rings in minimap units (outer outline and wall blocks alike)."""
     h, w = _axes(map_name, x, y)
+    if not len(h):
+        return []
     h0, w0 = h.min() - 4 * BIN_CM, w.min() - 4 * BIN_CM
     nx, ny = int((h.max() - h0) // BIN_CM) + 5, int((w.max() - w0) // BIN_CM) + 5
     hits, _, _ = np.histogram2d(w, h, bins=[ny, nx], range=[[w0, w0 + ny * BIN_CM], [h0, h0 + nx * BIN_CM]])
@@ -409,27 +413,33 @@ def _geometry_path(map_name: str) -> Path:
     return cache_dir() / "geometry" / f"{map_name}.json"
 
 
+_FALLBACK: dict[str, dict] = {}  # match-data outlines, kept for this process only
+
+
 def map_geometry(map_name: str, refresh: bool = False) -> dict:
-    """Floor rings, spawns, sites and callouts for one map, all in minimap units. Cached under the (gitignored)
-    data cache, since it is derived from match positions."""
+    """Floor rings, spawns, sites and callouts for one map, all in minimap units. A traced minimap is cached under
+    the (gitignored) data cache. The match-data fallback (no network) is kept in memory only, so the next run tries
+    the download again instead of keeping the rough outline for good."""
     path = _geometry_path(map_name)
-    if path.exists() and not refresh:
-        g = json.loads(path.read_text())
-        if g.get("version") == GEOMETRY_VERSION:
-            return g
+    if not refresh:
+        if map_name in _FALLBACK:
+            return _FALLBACK[map_name]
+        if path.exists():
+            g = json.loads(path.read_text())
+            if g.get("version") == GEOMETRY_VERSION and g.get("source") == TRACED:
+                return g
     from opscope.maps import spawns
     from opscope.zones import callouts, sites
     sp = spawns(map_name)
     k = turns_for(to_minimap(map_name, *sp["attacker"])) if "attacker" in sp else 0
     icon = fetch_icon(map_name)
     if icon is not None:
-        layers, source = trace_icon(icon), "official minimap (traced)"
+        layers, source = trace_icon(icon), TRACED
     else:
         layers, source = {"rings": floor_rings(map_name, *_positions(map_name)), "props": [], "site_areas": []}, "match data"
     turn = lambda rings: [np.column_stack(rotate(*np.array(r).T, k)).round(1).tolist() for r in rings]  # noqa: E731
     layers = {name: turn(rings) for name, rings in layers.items()}
     rings = layers["rings"]
-    allp = np.array([p for r in rings for p in r])
     pt = lambda x, y: [round(float(c), 1) for c in rotate(*to_minimap(map_name, x, y), k)]  # noqa: E731
     sites_ = [{"name": s["name"], "at": pt(s["x"], s["y"])} for s in sites().get(map_name, [])]
     site_areas = []
@@ -437,16 +447,26 @@ def map_geometry(map_name: str, refresh: bool = False) -> dict:
         c = np.array(ring).mean(0)
         near = min(sites_, key=lambda s: np.hypot(*(np.array(s["at"]) - c)), default=None)
         site_areas.append({"name": near["name"] if near else None, "ring": ring})
+    spawns_ = {side: pt(*xy) for side, xy in sp.items()}
+    # The view box covers the floor and every spawn and site marker, so none is cropped (a sparse fallback outline
+    # can be much smaller than the map).
+    allp = np.array([p for r in rings for p in r] + list(spawns_.values()) + [s["at"] for s in sites_], float)
+    bbox = ([float(allp[:, 0].min()), float(allp[:, 1].min()), float(allp[:, 0].max()), float(allp[:, 1].max())]
+            if len(allp) else [0.0, 0.0, float(SCALE), float(SCALE)])
     g = {
         "version": GEOMETRY_VERSION, "map": map_name, "source": source, "turns": k, "rings": rings,
         "units_per_m": round(SCALE * abs(transforms()[map_name]["x_mult"]) * 100, 3),  # map units per metre
         "props": layers["props"], "site_areas": site_areas,
-        "bbox": [float(allp[:, 0].min()), float(allp[:, 1].min()), float(allp[:, 0].max()), float(allp[:, 1].max())],
-        "spawns": {side: pt(*xy) for side, xy in spawns(map_name).items()},
+        "bbox": bbox,
+        "spawns": spawns_,
         "sites": sites_,
         # Community callout markers sometimes sit on a wall or roof; pins should land on walkable floor.
         "callouts": [{"name": c["name"], "at": snap_to_floor(pt(c["x"], c["y"]), rings)} for c in callouts().get(map_name, [])],
     }
+    if source != TRACED:
+        _FALLBACK[map_name] = g
+        return g
+    _FALLBACK.pop(map_name, None)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(g))
     return g

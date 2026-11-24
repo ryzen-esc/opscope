@@ -92,3 +92,74 @@ def test_markers_on_a_wall_snap_onto_the_floor():
         q = G.snap_to_floor(p, rings)
         assert G.inside(q, rings)
     assert G.snap_to_floor([10, 10], rings) == [10, 10]
+
+
+# ---- map_geometry: the offline fallback ------------------------------
+
+def _minimap_image() -> np.ndarray:
+    """A 100 px synthetic minimap: grey floor, and an olive plant zone round each site centre below."""
+    img = np.zeros((100, 100, 4), dtype=np.uint8)
+    img[5:95, 5:95] = (118, 118, 118, 255)
+    img[18:42, 18:42] = (152, 152, 118, 255)   # zone round site A (minimap 300, 300)
+    img[58:82, 58:82] = (152, 152, 118, 255)   # zone round site B (minimap 700, 700)
+    return img
+
+
+@pytest.fixture
+def geo_map(monkeypatch, tmp_path):
+    """A synthetic map for map_geometry: transform, spawns, sites, callouts and minimap image all made up, and the
+    geometry cache pointed at tmp_path. Returns a function that sets the attacker spawn (game x, y)."""
+    import opscope.maps
+    import opscope.zones
+    tf = {"testmap": {"x_mult": 1e-4, "y_mult": -1e-4, "x_add": 0.5, "y_add": 0.5}}
+    monkeypatch.setattr(G, "transforms", lambda: tf)
+    monkeypatch.setattr(G, "_geometry_path", lambda m: tmp_path / "geometry" / f"{m}.json")
+    monkeypatch.setattr(G, "_FALLBACK", {})
+    monkeypatch.setattr(G, "fetch_icon", lambda m: _minimap_image())
+    # game (x, y) -> unrotated minimap: A (2000, -2000) -> (300, 300); B (-2000, 2000) -> (700, 700)
+    monkeypatch.setattr(opscope.zones, "sites", lambda: {"testmap": [{"name": "A", "x": 2000, "y": -2000},
+                                                                     {"name": "B", "x": -2000, "y": 2000}]})
+    monkeypatch.setattr(opscope.zones, "callouts", lambda: {"testmap": [{"name": "Mid", "x": 300, "y": 200}]})
+
+    def set_attacker(ax, ay):
+        monkeypatch.setattr(opscope.maps, "spawns", lambda m: {"attacker": (ax, ay), "defender": (-ax, -ay)})
+        return "testmap"
+    return set_attacker, tmp_path
+
+
+def test_offline_fallback_is_not_cached_for_good_and_its_view_keeps_every_marker(geo_map, monkeypatch):
+    set_attacker, tmp_path = geo_map
+    m = set_attacker(-4000, 0)
+    monkeypatch.setattr(G, "fetch_icon", lambda m: None)   # offline
+    rng = np.random.default_rng(1)
+    # sparse data: one 8 m x 8 m patch near the middle, far from both spawns and sites
+    monkeypatch.setattr(G, "_positions", lambda m: (rng.uniform(0, 800, 4000), rng.uniform(0, 800, 4000)))
+    g = G.map_geometry(m)
+    assert g["source"] == "match data" and g["rings"]
+    assert not (tmp_path / "geometry" / "testmap.json").exists()   # nothing persisted
+    assert G.map_geometry(m) is g                                  # reused within this process
+    x0, y0, x1, y1 = g["bbox"]
+    for p in [*g["spawns"].values(), *(s["at"] for s in g["sites"])]:
+        assert x0 <= p[0] <= x1 and y0 <= p[1] <= y1
+
+    # no positions at all: still a payload, framed on the markers
+    monkeypatch.setattr(G, "_FALLBACK", {})
+    monkeypatch.setattr(G, "_positions", lambda m: (np.empty(0), np.empty(0)))
+    g = G.map_geometry(m)
+    assert g["rings"] == [] and g["bbox"][3] > g["bbox"][1]
+
+    # next run with the network back: the traced minimap is fetched and cached
+    monkeypatch.setattr(G, "_FALLBACK", {})
+    monkeypatch.setattr(G, "fetch_icon", lambda m: _minimap_image())
+    g = G.map_geometry(m)
+    assert g["source"] == G.TRACED and (tmp_path / "geometry" / "testmap.json").exists()
+
+
+def test_a_stale_fallback_file_on_disk_is_not_reused(geo_map):
+    import json
+    set_attacker, tmp_path = geo_map
+    m = set_attacker(-4000, 0)
+    path = tmp_path / "geometry" / "testmap.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"version": G.GEOMETRY_VERSION, "source": "match data", "turns": 0, "rings": []}))
+    assert G.map_geometry(m)["source"] == G.TRACED
