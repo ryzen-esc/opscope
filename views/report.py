@@ -12,7 +12,7 @@ from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct
 from opscope.load import CLOUD9_TEAMS, cohort_label, peer_group
 from opscope.ui.cards import CATEGORY_LABELS, dossier_header, headline_card, insight_card, page_header, suggestion_card
-from opscope.ui.filters import sidebar, team_name
+from opscope.ui.filters import quick_picks, sidebar, team_name
 from opscope.ui.minimap import add_sites, base_map
 from opscope.ui.theme import ACCENT, ATTACK, BG, DEFENSE, NEUTRAL_BAR, chart
 from opscope.zones import sites
@@ -26,6 +26,7 @@ def insights_for(scope: Scope):
 
 
 f = sidebar(side_applies=False)
+quick_picks(f["team_id"])
 tid = f["team_id"]
 team = team_name(tid)
 scope = Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"], patches=f["patches"], events=f["events"])

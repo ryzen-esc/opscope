@@ -50,20 +50,26 @@ if r.n_rounds == 0:
     st.info("No rounds match these filters.")
     st.stop()
 
-# ---- map choice ------------------------------------------------------------------------------
-if f["maps"]:
-    map_name = f["maps"][0]
-else:
-    played = r.rounds["map"].value_counts()
-    map_name = st.selectbox("Map", list(played.index), format_func=lambda m: f"{m.title()} ({played[m]} {unit})",
-                            key="util_map")
+# ---- second control row: map, view, agents --------------------------------------------------------
+cb_map, cb_view, cb_agents = st.columns([1.6, 1.6, 2.8], vertical_alignment="bottom")
+with cb_map:
+    if f["maps"]:
+        map_name = f["maps"][0]
+        st.selectbox("Map", [map_name], format_func=str.title, disabled=True, key="util_map_fixed",
+                     help="Set by the Map filter in the sidebar.")
+    else:
+        played = r.rounds["map"].value_counts()
+        map_name = st.selectbox("Map", list(played.index), format_func=lambda m: f"{m.title()} ({played[m]} {unit})",
+                                key="util_map")
 map_rounds = int((r.rounds["map"] == map_name).sum())
 
-# ---- cast spot vs estimated landing ------------------------------------------------------------
+# Cast spot vs estimated landing.
 all_casts = add_landings(r.casts)
 modeled = all_casts["land_x"].notna() & (all_casts["map"] == map_name)
-VIEWS = ["Where they stand", "Where it lands (est.)"]
-view = (st.segmented_control("Show", VIEWS, default=VIEWS[0], key="util_view") or VIEWS[0]) if modeled.any() else VIEWS[0]
+VIEWS = ["Cast spot", "Landing (est.)"]
+with cb_view:
+    view = (st.segmented_control("Show", VIEWS, default=VIEWS[0], key="util_view") or VIEWS[0]) if modeled.any() \
+        else VIEWS[0]
 landing_view = view == VIEWS[1]
 if landing_view:
     # Damaging thrown utility moves to its estimated landing; everything else stays at the cast spot.
@@ -75,9 +81,11 @@ if landing_view:
 casts = all_casts[all_casts["map"] == map_name]
 
 agents = sorted(casts["agent"].dropna().unique())
-# Keyed by class + map so the selection resets when those change (a stale selection would hide agents).
-pick = st.multiselect("Agents", agents, default=agents, format_func=str.title,
-                      key=f"util_agents_{cls_label}_{phase_label}_{map_name}_{f['team_id']}_{f['side']}") if agents else []
+with cb_agents:
+    # Keyed by class + map so the selection resets when those change (a stale selection would hide agents).
+    pick = st.multiselect("Agents", agents, default=agents, format_func=str.title,
+                          key=f"util_agents_{cls_label}_{phase_label}_{map_name}_{f['team_id']}_{f['side']}") \
+        if agents else []
 casts = casts[casts["agent"].isin(pick)] if pick else casts.iloc[0:0]
 
 # ---- habits (repeat spots) -------------------------------------------------------------------
@@ -90,30 +98,8 @@ if not strong.empty:
     areas = strong["area"] if "area" in strong else [None] * len(strong)
     strong["label"] = [f"{SPOT_MARKS[i]} {a}" if a else SPOT_MARKS[i] for i, a in enumerate(areas)]
     strong["mark"] = [SPOT_MARKS[i] for i in range(len(strong))]
-for _, h in strong.head(3).iterrows():
-    where = f" near <b>{h['area']}</b>" if h.get("area") else ""
-    insight(f"{h['mark']} <b>{h['player_name']}</b> ({h['agent'].title()}) puts <b>{pretty(h['ability'])}</b> in the same spot{where} "
-            f"(±{SPOT_RADIUS_CM // 100} m) in <b>{of(int(h['rounds']), int(h['rounds_on_agent']), unit + ' on ' + h['agent'].title())}</b> "
-            f"on {map_name.title()}.")
-if strong.empty and not casts.empty:
-    insight(f"No placement on {map_name.title()} repeats in at least 40% of rounds (with {MIN_SAMPLE}+ rounds). "
-            f"This team varies its {cls_label.lower()} here.")
 
-# ---- cards -----------------------------------------------------------------------------------
-k1, k2, k3 = st.columns(3)
-rounds_with = casts["round_key"].nunique()
-with k1:
-    stat_card(f"{cls_label} casts on {map_name.title()}", f"{len(casts)}", f"across {of(rounds_with, map_rounds, unit)}")
-with k2:
-    pre = int((casts["phase"] == "buy").sum())
-    stat_card("Placed before the round starts", f"{pre / len(casts):.0%}" if len(casts) else "—",
-              of(pre, len(casts), "casts"), "buy-phase setups are the most predictable")
-with k3:
-    top = casts["ability"].value_counts()
-    stat_card("Most used", pretty(top.index[0]) if len(top) else "—",
-              of(int(top.iloc[0]), len(casts), "casts") if len(top) else "", None)
-
-# ---- map + tables ----------------------------------------------------------------------------
+# ---- map (left) + findings rail (right) ------------------------------------------------------------
 left, right = st.columns([3, 2], gap="large")
 with left:
     st.subheader("Where it goes")
@@ -150,27 +136,48 @@ with left:
                    "lands, so thrown utility shows the aim direction instead. Rings mark spots reused in many rounds.")
 
 with right:
-    st.subheader("Who uses what")
-    if not casts.empty:
-        mtab = (casts.groupby(["player_name", "agent", "ability"], observed=True)
-                .agg(casts=("event_id", "size"), rounds=("round_key", "nunique")).reset_index())
-        ar = r.agent_rounds_by_map(map_name)
-        pid = casts.drop_duplicates("player_name").set_index("player_name")["player_id"]
-        mtab["on_agent"] = [int(ar.get((pid[p], a), n)) for p, a, n in zip(mtab["player_name"], mtab["agent"], mtab["rounds"])]
-        mtab["Used in"] = [of(n, d, "rds") for n, d in zip(mtab["rounds"], mtab["on_agent"])]
-        mtab["Per round"] = (mtab["casts"] / mtab["on_agent"]).round(2)
-        show = mtab.sort_values("casts", ascending=False).rename(columns={"player_name": "Player", "agent": "Agent",
-                                                                           "ability": "Ability", "casts": "Casts"})
-        show["Agent"] = show["Agent"].str.title()
-        show["Ability"] = show["Ability"].map(pretty)
-        st.dataframe(show[["Player", "Agent", "Ability", "Casts", "Used in", "Per round"]], hide_index=True,
-                     width="stretch", height=min(420, 38 + 35 * len(show)))
+    st.subheader("Habits")
+    for _, h in strong.head(3).iterrows():
+        where = f" near <b>{h['area']}</b>" if h.get("area") else ""
+        insight(f"{h['mark']} <b>{h['player_name']}</b> ({h['agent'].title()}) puts <b>{pretty(h['ability'])}</b> in the "
+                f"same spot{where} (±{SPOT_RADIUS_CM // 100} m) in <b>{of(int(h['rounds']), int(h['rounds_on_agent']), unit + ' on ' + h['agent'].title())}</b> "
+                f"on {map_name.title()}.")
+    if strong.empty and not casts.empty:
+        insight(f"No placement on {map_name.title()} repeats in at least 40% of rounds (with {MIN_SAMPLE}+ rounds). "
+                f"This team varies its {cls_label.lower()} here.")
+    rounds_with = casts["round_key"].nunique()
+    k1, k2 = st.columns(2)
+    with k1:
+        stat_card(f"Casts on {map_name.title()}", f"{len(casts)}", f"across {of(rounds_with, map_rounds, unit)}")
+    with k2:
+        pre = int((casts["phase"] == "buy").sum())
+        stat_card("Before the round starts", f"{pre / len(casts):.0%}" if len(casts) else "—",
+                  of(pre, len(casts), "casts"), "buy-phase setups are the most predictable")
+    top = casts["ability"].value_counts()
+    stat_card("Most used", pretty(top.index[0]) if len(top) else "—",
+              of(int(top.iloc[0]), len(casts), "casts") if len(top) else "", None)
     st.subheader("When it's used")
     if not casts.empty:
         window = casts.assign(window=casts["phase"].map({"buy": "buy phase"}).fillna(casts["bucket"].astype(str)))
         tim = window.groupby("window").size().reindex(["buy phase", "0–20s", "20–40s", "40–60s", "60s+"], fill_value=0)
         figt = px.bar(tim.reset_index(name="casts"), x="window", y="casts", text="casts",
                       color_discrete_sequence=[ACCENT])
-        figt.update_layout(height=250, xaxis_title=None, yaxis=dict(title="casts", **count_axis(tim.max())))
+        figt.update_layout(height=230, xaxis_title=None, yaxis=dict(title="casts", **count_axis(tim.max())))
         chart(figt)
         st.caption("Time after the buy phase ends. Pre-round setups (buy phase) are shown separately.")
+
+st.subheader("Who uses what")
+if not casts.empty:
+    mtab = (casts.groupby(["player_name", "agent", "ability"], observed=True)
+            .agg(casts=("event_id", "size"), rounds=("round_key", "nunique")).reset_index())
+    ar = r.agent_rounds_by_map(map_name)
+    pid = casts.drop_duplicates("player_name").set_index("player_name")["player_id"]
+    mtab["on_agent"] = [int(ar.get((pid[p], a), n)) for p, a, n in zip(mtab["player_name"], mtab["agent"], mtab["rounds"])]
+    mtab["Used in"] = [of(n, d, "rds") for n, d in zip(mtab["rounds"], mtab["on_agent"])]
+    mtab["Per round"] = (mtab["casts"] / mtab["on_agent"]).round(2)
+    show = mtab.sort_values("casts", ascending=False).rename(columns={"player_name": "Player", "agent": "Agent",
+                                                                       "ability": "Ability", "casts": "Casts"})
+    show["Agent"] = show["Agent"].str.title()
+    show["Ability"] = show["Ability"].map(pretty)
+    st.dataframe(show[["Player", "Agent", "Ability", "Casts", "Used in", "Per round"]], hide_index=True,
+                 width="stretch", height=min(420, 38 + 35 * len(show)))

@@ -2,7 +2,7 @@
 import streamlit as st
 
 from opscope.ui import theme  # noqa: F401  (registers the Plotly template)
-from opscope.ui.brand import ICON
+from opscope.ui.brand import ICON, SPLASH_HTML
 from opscope.ui.cards import inject_css
 
 st.set_page_config(page_title="OpScope", page_icon=ICON, layout="wide", initial_sidebar_state="expanded")
@@ -20,7 +20,7 @@ SETUP_HELP = """
 """
 
 
-@st.cache_resource(show_spinner="Loading 2,000+ pro maps…")
+@st.cache_resource(show_spinner=False)
 def dataset_summary() -> dict:
     from opscope.load import load
     d = load()
@@ -29,8 +29,11 @@ def dataset_summary() -> dict:
             "rounds": int(d.rounds["played"].sum()), "first": started.min(), "last": started.max()}
 
 
+splash = st.empty()  # branded loading screen; on cached reruns it is replaced before it's ever seen
+splash.markdown(SPLASH_HTML, unsafe_allow_html=True)
 try:
     summary = dataset_summary()
+    splash.empty()
 except (FileNotFoundError, RuntimeError) as exc:  # no cache yet, or STL_DATA_DIR not set
     st.title("OpScope")
     st.warning(SETUP_HELP)

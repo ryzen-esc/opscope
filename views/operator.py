@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 
 from opscope.analytics.operator import SETUP_WINDOW, Scope, operator_report, time_bucket
-from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
+from opscope.analytics.stats import MIN_SAMPLE, of, wilson
 from opscope.ui.cards import insight, map_key, page_header, rate_card
 from opscope.ui.filters import sidebar, team_name
 from opscope.ui.minimap import BUCKET_COLORS, add_density, add_points_by_bucket, add_sightlines, base_map
@@ -18,10 +18,14 @@ def report(scope: Scope):
     return operator_report(scope)
 
 
+
 f = sidebar()
 team = team_name(f["team_id"])
 header_slot = st.empty()
-weapon_label = st.segmented_control("Weapon", list(WEAPONS), default="Operator", key="weapon") or "Operator"
+# One control bar, so the map (the page's main visual) starts above the fold.
+cb_weapon, cb_map, cb_time, cb_lines = st.columns([2.9, 1.6, 2.4, 0.9], vertical_alignment="bottom")
+with cb_weapon:
+    weapon_label = st.segmented_control("Weapon", list(WEAPONS), default="Operator", key="weapon") or "Operator"
 weapon = WEAPONS[weapon_label]
 gun = weapon_label
 
@@ -38,63 +42,29 @@ if r.n_rounds == 0:
     st.info("No rounds match these filters.")
     st.stop()
 
-# ---- headline insights ---------------------------------------------------------------------
 holders = r.holder_table()
 maps = r.map_table()
-if r.n_gun_rounds:
-    top = holders.groupby("player_name")["rounds"].sum().sort_values(ascending=False)
-    main, main_n = top.index[0], int(top.iloc[0])
-    agents = holders[holders["player_name"] == main].sort_values("rounds", ascending=False)
-    agent_txt = ", ".join(f"{a.title()} {n}" for a, n in zip(agents["agent"], agents["rounds"]))
-    insight(f"<b>{main}</b> is the {gun} player: <b>{of(main_n, r.n_gun_rounds, f'{gun} rounds')}</b> ({agent_txt}).")
-    big = maps[maps["rounds"] >= 2 * MIN_SAMPLE].copy()
-    if len(big) >= 2:
-        # Most confidently high (Wilson lower bound) vs most confidently low (Wilson upper bound).
-        bounds = [wilson(int(k), int(n)) for k, n in zip(big["gun_rounds"], big["rounds"])]
-        big["lo_b"], big["hi_b"] = [b[0] for b in bounds], [b[1] for b in bounds]
-        hi, lo = big.loc[big["lo_b"].idxmax()], big.loc[big["hi_b"].idxmin()]
-        if hi["map"] != lo["map"] and hi["lo_b"] > lo["hi_b"]:
-            insight(f"{gun} usage depends on the map: <b>{hi['map'].title()}</b> {of(int(hi['gun_rounds']), int(hi['rounds']), unit)} "
-                    f"vs <b>{lo['map'].title()}</b> {of(int(lo['gun_rounds']), int(lo['rounds']), unit)}.")
-    if len(r.pickups):
-        insight(f"The {gun} changed hands mid-round in <b>{r.pickups[['game_id', 'round_num']].drop_duplicates().shape[0]}</b> rounds "
-                f"(fired by a player who didn't buy it: {', '.join(r.pickups['player_name'].value_counts().index[:3])}).")
-else:
-    insight(f"{team} never had a {gun} at the end of the buy phase in these {r.n_rounds} rounds.")
-
-# ---- stat cards ----------------------------------------------------------------------------
-c1, c2, c3, c4 = st.columns(4)
-with c1:
-    peer = f"typical {r.league_label} team" if r.league_method == "typical team" else f"all other {r.league_label}"
-    rate_card(f"Rounds with {gun}", r.n_gun_rounds, r.n_rounds, unit, league=r.league_share,
-              league_label=peer, league_rate=r.league_rate)
-with c2:
-    w = r.win_rates("full")
-    rate_card(f"Full-buy win rate with {gun}", *w["with"], "full buys")
-with c3:
-    rate_card(f"Full-buy win rate without", *w["without"], "full buys")
-with c4:
-    k, n = r.kept()
-    rate_card(f"Survived with the {gun}", k, n, f"{gun} rounds")
-
-# ---- map + side panels ---------------------------------------------------------------------
-left, right = st.columns([3, 2], gap="large")
-with left:
-    st.subheader("Where they set up")
+bucket_names = list(BUCKET_COLORS)
+with cb_map:
     if f["maps"]:
         map_name = f["maps"][0]
+        st.selectbox("Map", [map_name], format_func=str.title, disabled=True, key="op_map_fixed",
+                     help="Set by the Map filter in the sidebar.")
     else:
         gun_maps = maps[maps["gun_rounds"] > 0].sort_values("gun_rounds", ascending=False)
         options = list(gun_maps["map"]) or list(maps["map"])
         map_name = st.selectbox("Map", options, format_func=str.title, key="op_map")
+with cb_time:
+    buckets = st.multiselect("Time in round", bucket_names, default=bucket_names[:2], key="op_buckets") or bucket_names
+with cb_lines:
+    show_lines = st.toggle("Kill lines", value=True)
+
+# ---- map (left) + findings rail (right) ------------------------------------------------------------
+left, right = st.columns([3, 2], gap="large")
+with left:
+    st.subheader("Where they set up")
     pos = r.positions[r.positions["map"] == map_name]
     sight = r.sightlines[r.sightlines["map"] == map_name]
-    bucket_names = list(BUCKET_COLORS)
-    ctl1, ctl2 = st.columns([3, 1])
-    with ctl1:
-        buckets = st.multiselect("Time in round", bucket_names, default=bucket_names[:2], key="op_buckets") or bucket_names
-    with ctl2:
-        show_lines = st.toggle("Kill lines", value=True)
     shown = pos[pos["bucket"].isin(buckets)]
     # Kill lines follow the same time windows as the dots, so every line starts where the holder was seen.
     sight = sight[time_bucket(sight["t"]).isin(buckets)]
@@ -143,6 +113,41 @@ with left:
                 f"(seen in {of(a['n'], gun_rounds_map, f'{gun} rounds')}).")
 
 with right:
+    st.subheader("At a glance")
+    if r.n_gun_rounds:
+        top = holders.groupby("player_name")["rounds"].sum().sort_values(ascending=False)
+        main, main_n = top.index[0], int(top.iloc[0])
+        agents = holders[holders["player_name"] == main].sort_values("rounds", ascending=False)
+        agent_txt = ", ".join(f"{a.title()} {n}" for a, n in zip(agents["agent"], agents["rounds"]))
+        insight(f"<b>{main}</b> is the {gun} player: <b>{of(main_n, r.n_gun_rounds, f'{gun} rounds')}</b> ({agent_txt}).")
+        big = maps[maps["rounds"] >= 2 * MIN_SAMPLE].copy()
+        if len(big) >= 2:
+            # Most confidently high (Wilson lower bound) vs most confidently low (Wilson upper bound).
+            bounds = [wilson(int(k), int(n)) for k, n in zip(big["gun_rounds"], big["rounds"])]
+            big["lo_b"], big["hi_b"] = [b[0] for b in bounds], [b[1] for b in bounds]
+            hi, lo = big.loc[big["lo_b"].idxmax()], big.loc[big["hi_b"].idxmin()]
+            if hi["map"] != lo["map"] and hi["lo_b"] > lo["hi_b"]:
+                insight(f"{gun} usage depends on the map: <b>{hi['map'].title()}</b> {of(int(hi['gun_rounds']), int(hi['rounds']), unit)} "
+                        f"vs <b>{lo['map'].title()}</b> {of(int(lo['gun_rounds']), int(lo['rounds']), unit)}.")
+        if len(r.pickups):
+            insight(f"The {gun} changed hands mid-round in <b>{r.pickups[['game_id', 'round_num']].drop_duplicates().shape[0]}</b> rounds "
+                    f"(fired by a player who didn't buy it: {', '.join(r.pickups['player_name'].value_counts().index[:3])}).")
+    else:
+        insight(f"{team} never had a {gun} at the end of the buy phase in these {r.n_rounds} rounds.")
+    c1, c2 = st.columns(2)
+    with c1:
+        peer = f"typical {r.league_label} team" if r.league_method == "typical team" else f"all other {r.league_label}"
+        rate_card(f"Rounds with {gun}", r.n_gun_rounds, r.n_rounds, unit, league=r.league_share,
+                  league_label=peer, league_rate=r.league_rate)
+    with c2:
+        k, n = r.kept()
+        rate_card(f"Survived with the {gun}", k, n, f"{gun} rounds")
+    c3, c4 = st.columns(2)
+    w = r.win_rates("full")
+    with c3:
+        rate_card(f"Full-buy wins with {gun}", *w["with"], "full buys")
+    with c4:
+        rate_card("Full-buy wins without", *w["without"], "full buys")
     st.subheader("Who holds it")
     if not holders.empty:
         hv = holders.assign(label=holders["player_name"] + " · " + holders["agent"].str.title())

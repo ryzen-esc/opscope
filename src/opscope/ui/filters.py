@@ -10,6 +10,8 @@ from opscope.analytics.operator import team_rounds
 from opscope.load import CLOUD9_TEAMS, load
 
 SIDES = {"Defense": "defender", "Attack": "attacker", "Both": None}
+# One-click teams for a first look: Cloud9 (self-scout) and its main VCT Americas 2025 rivals. IDs, not names.
+QUICK_PICKS = {"79": "Cloud9 · self-scout", "97": "NRG", "1079": "Sentinels", "96": "G2 Esports", "3429": "Cloud9 GC"}
 
 
 @cache
@@ -64,3 +66,20 @@ def sidebar(side_applies: bool = True) -> dict:
         "patches": tuple(patches),
         "events": tuple(events),
     }
+
+
+def _pick_team(team_id: str) -> None:
+    st.session_state["team_id"] = team_id
+    st.session_state["opponents"] = []  # opponents belong to the previous team
+
+
+def quick_picks(current: str) -> None:
+    """A row of one-click teams, so a first-time visitor sees a report without hunting through 160 teams."""
+    labels = team_labels()
+    with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+        st.markdown('<span class="ops-picks-label">Quick picks</span>', unsafe_allow_html=True, width="content")
+        for tid, label in QUICK_PICKS.items():
+            if tid in labels:
+                st.button(label, key=f"pick_{tid}", type="primary" if tid == current else "secondary",
+                          on_click=_pick_team, args=(tid,))
+        st.caption("or any of the teams in the sidebar", width="content")

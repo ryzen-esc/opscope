@@ -99,6 +99,16 @@ h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} 
 .ops-tagline {{color:{TEXT_FAINT};font-size:.78rem;letter-spacing:.06em;margin:-2px 0 6px;}}
 @keyframes ops-in {{from {{opacity:0;transform:translateY(4px);}} to {{opacity:1;transform:none;}}}}
 
+/* ---- loading ---- */
+.ops-splash {{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;}}
+.ops-splash-reticle {{animation:ops-spin 2.4s cubic-bezier(.6,0,.4,1) infinite;}}
+@keyframes ops-spin {{0% {{transform:rotate(0) scale(1);}} 50% {{transform:rotate(90deg) scale(.9);}} 100% {{transform:rotate(180deg) scale(1);}}}}
+.ops-splash-bar {{width:220px;height:3px;background:{BORDER};margin-top:18px;overflow:hidden;}}
+.ops-splash-bar div {{width:35%;height:3px;background:{ACCENT};animation:ops-scan 1.3s ease-in-out infinite;}}
+@keyframes ops-scan {{from {{transform:translateX(-100%);}} to {{transform:translateX(290%);}}}}
+[data-testid="stSpinner"] {{color:{ACCENT};font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;}}
+.ops-picks-label {{color:{TEXT_DIM};font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;}}
+
 /* ---- cards ---- */
 .ops-cut {{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);}}
 .ops-card {{background:{PANEL};border:1px solid {BORDER};padding:14px 16px;height:100%;animation:ops-in .25s ease-out;}}
