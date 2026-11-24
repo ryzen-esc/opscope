@@ -366,7 +366,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
 
   function summary(t, mode, n, rounds, byAb) {
     const top = Object.entries(byAb).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    const span = mode === "build" ? `by ${clockLabel(t)}` : `${clockLabel(t - MOMENT)}–${clockLabel(t)}`;
+    const span = mode === "build" ? `by ${clockLabel(t)}` : `${clockLabel(Math.max(BUY_FROM, t - MOMENT))}–${clockLabel(t)}`;
     return `<div class="k">Utility out ${span}${t < 0 ? " · buy phase" : ""}</div>
       <div class="seen"><b>${n}</b> cast${n === 1 ? "" : "s"} in <b>${rounds.size}</b> of ${m().rounds} rounds</div>
       ${top.length ? `<ol>${top.map(([a, k]) => `<li><span>${esc(a)}</span><span class="mbar"><i style="width:${(k / Math.max(1, n)) * 100}%"></i></span>
