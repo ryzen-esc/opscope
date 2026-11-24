@@ -103,11 +103,16 @@ class UtilityReport:
         for (pid, name, agent, ability, cls), g in c.groupby(
                 ["player_id", "player_name", "agent", "ability", "util_class"], observed=True):
             denom = int(ar.get((pid, agent), g["round_key"].nunique()))
-            for rank, s in enumerate(repeat_spots(g.reset_index(drop=True), max_spots=max_per_ability), 1):
+            g = g.reset_index(drop=True)
+            pts = g[["x", "y"]].to_numpy(float)
+            for rank, s in enumerate(repeat_spots(g, max_spots=max_per_ability), 1):
+                # How far the spot's casts reach from its centre (display only: members are within 4 m of one
+                # cast, so a few sit a little over 4 m from the mean).
+                reach = float(np.hypot(*(pts[s["members"]] - (s["x"], s["y"])).T).max())
                 rows.append({"player_id": pid, "player_name": name, "agent": agent, "ability": ability,
                              "util_class": cls, "spot": rank, "x": s["x"], "y": s["y"],
                              "rounds": s["rounds"], "rounds_on_agent": denom,
-                             "share": s["rounds"] / denom if denom else 0.0})
+                             "share": s["rounds"] / denom if denom else 0.0, "reach_cm": reach})
         out = pd.DataFrame(rows)
         if out.empty:
             return out

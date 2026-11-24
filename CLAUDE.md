@@ -48,7 +48,7 @@ config `opscope-web` in `/Users/eli/hackathon/.claude/launch.json`. Plain HTML/C
     up with a path, "Watch one round" / click plays a single round with a list of what GRID recorded; ‹ › or [ ] step.
     Amber notes: 0 gun rounds ("that absence is the finding") or < 8.
   - **Utility** (`utility.js`): type (traps default, recon, smokes, stalls, flashes, all), phase, Cast spot / Landing (est.),
-    aim lines (on by default for thrown utility), habit rings (4 m, ①②③, click to zoom), **player chips** (whole roster
+    aim lines (on by default for thrown utility), habit rings (4 m spots; each ring is sized to hold every cast counted, ①②③, click to zoom), **player chips** (whole roster
     that played the map; players with none of that utility greyed "no smokes here"; names in "Who uses what" also filter),
     legend toggles (top 8 abilities coloured, rest grouped grey). Clock starts at −0:30 (buy phase ~28.5 s; earlier casts
     sit at the start, real time in the tooltip). Same round labels / hover / watch-one-round as Operator.

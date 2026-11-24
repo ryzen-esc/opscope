@@ -9,6 +9,7 @@ Rules carried over from the Streamlit pages, so the numbers and wording stay the
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import replace
 from functools import cache, lru_cache
@@ -426,8 +427,11 @@ def _habits(rep, map_name: str) -> list[dict]:
     u, v = _view(map_name, h["x"], h["y"])
     out = []
     for i, row in enumerate(h.itertuples()):
+        # Ring radius: at least the 4 m spot size, and wide enough to hold every cast counted in it (rounded up).
+        r_m = math.ceil(max(SPOT_RADIUS_CM, row.reach_cm) / 10) / 10
         out.append({"player": row.player_name, "agent": row.agent, "ability": row.ability,
                     "ability_name": pretty(row.ability), "class": row.util_class, "at": [float(u[i]), float(v[i])],
+                    "r_m": r_m,
                     "k": int(row.rounds), "n": int(row.rounds_on_agent), "share": _r(row.share, 4),
                     "area": row.area, "strong": bool(row.rounds_on_agent >= MIN_SAMPLE and row.share >= HABIT_MIN_SHARE)})
     out.sort(key=lambda x: (x["strong"], x["share"], x["k"]), reverse=True)

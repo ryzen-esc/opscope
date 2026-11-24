@@ -118,7 +118,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
       ${filterBanner}
       <section class="blk">
         <div class="k">${esc(title(CLASS_LONG[st.cls]))} · ${esc(title(st.map))} · ${esc(unit)} · ${st.players.size ? esc([...st.players].join(", ")) : esc(data.name)}</div>
-        <h4 style="margin-top:12px">Habits <span>same spot within 4 m, in 40%+ of rounds on the agent</span></h4>
+        <h4 style="margin-top:12px">Habits <span>same spot (within 4 m of one cast), in 40%+ of rounds on the agent</span></h4>
         ${hab.length ? `<ol class="habits">${hab.map((h, i) => `<li data-h="${i}" class="${st.focusHabit === i ? "on" : ""}">
           <span class="hmk">${MARKS[i]}</span><span><b>${esc(h.player)}</b> (${esc(title(h.agent))}) puts <b>${esc(h.ability_name)}</b> in the same spot${
             h.area ? ` near <b>${esc(h.area)}</b>` : ""} in <b>${h.k} of ${h.n}</b> ${esc(unit)} on ${esc(title(h.agent))}.</span></li>`).join("")}</ol>`
@@ -260,8 +260,8 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
       layer.dots.push({ g, c, at, shown: -1 });
     }
     if (st.spots) {
-      const r = 4 * (geo.units_per_m || 7);
       habitsNow().forEach((h, i) => {
+        const r = (h.r_m || 4) * (geo.units_per_m || 7); // wide enough for every cast counted in the spot
         const g = el("g", { class: `hring${st.focusHabit === i ? " on" : ""}` }, map.layers.top);
         el("circle", { cx: h.at[0], cy: h.at[1], r, fill: "rgba(255,255,255,.04)", stroke: "#fff", "stroke-width": 1.4, "stroke-dasharray": "4 3",
           "vector-effect": "non-scaling-stroke" }, g);
@@ -269,7 +269,8 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
           "stroke-width": 3, "paint-order": "stroke" }, g);
         t.textContent = MARKS[i];
         g.addEventListener("mouseenter", (e) => tip.show(e, `${MARKS[i]} <b>${esc(h.player)}</b>'s ${esc(h.ability_name)}${h.area ? ` near <b>${esc(h.area)}</b>` : ""}:
-          same spot (within 4 m) in <b>${h.k} of ${h.n}</b> rounds on ${esc(title(h.agent))}`));
+          same spot (within 4 m of one cast) in <b>${h.k} of ${h.n}</b> rounds on ${esc(title(h.agent))}
+          <br><span style="color:var(--dim)">The ring holds every cast counted.</span>`));
         g.addEventListener("mousemove", (e) => tip.move(e));
         g.addEventListener("mouseleave", () => tip.hide());
         g.addEventListener("click", () => focusHabit(i));
