@@ -192,7 +192,9 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
     tl?.destroy();
     tl = createTimeline(ui.strip, { min: 0, max: tmax, start: 0, segments: TIME.map((b) => ({ ...b, to: Math.min(b.to, tmax) })),
       ticks: m.kills.map((k) => k.t), onTime: draw });
-    if (m.positions.length || m.kills.length) setTimeout(() => alive && tl?.play(), 900);
+    // Auto-play only the timeline made here: a later map switch replaces tl before this fires.
+    const mine = tl;
+    if (m.positions.length || m.kills.length) setTimeout(() => alive && tl === mine && mine.play(), 900);
   }
 
   // ---- rounds: label, highlight on hover, watch one ----
@@ -224,7 +226,8 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
     for (const k of layer.kills) k.g.classList.remove("dim");
     tl?.pause();
     tl?.set(0);
-    setTimeout(() => alive && st.round === i && tl?.play(), 250);
+    const mine = tl;
+    setTimeout(() => alive && st.round === i && mine && tl === mine && mine.play(), 250);
   }
 
   function step(dir) {

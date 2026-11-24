@@ -189,7 +189,9 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
     tl = createTimeline(ui.strip, { min: BUY_FROM, max: tmax, start: BUY_FROM,
       segments: [{ from: BUY_FROM, to: 0, label: "Buy phase", color: COLORS.amb }, ...TIME.map((b) => ({ ...b, to: Math.min(b.to, tmax) }))],
       ticks: [], onTime: draw });
-    if (mm.casts.length) setTimeout(() => alive && tl?.play(), 900);
+    // Auto-play only the timeline made here: a later map switch replaces tl before this fires.
+    const mine = tl;
+    if (mm.casts.length) setTimeout(() => alive && tl === mine && mine.play(), 900);
   }
 
   function renderHud() {
@@ -302,7 +304,8 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
     for (const d of layer.dots) d.g.classList.remove("dim");
     if (i == null) { trace(null); tl?.set(tl.time); return; }
     tl?.pause(); tl?.set(BUY_FROM);
-    setTimeout(() => alive && st.round === i && tl?.play(), 250);
+    const mine = tl;
+    setTimeout(() => alive && st.round === i && mine && tl === mine && mine.play(), 250);
   }
   function step(dir) {
     if (!order.length) return;

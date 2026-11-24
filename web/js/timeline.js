@@ -52,6 +52,7 @@ export function createTimeline(host, opts) {
     if (!silent) o.onTime?.(t, mode);
   }
   function setPlaying(p) {
+    if (p === playing) return; // a second play() must not start a second frame loop
     playing = p;
     playBtn.innerHTML = icon(p);
     playBtn.setAttribute("aria-label", p ? "Pause" : "Play");
@@ -59,6 +60,7 @@ export function createTimeline(host, opts) {
     else cancelAnimationFrame(raf);
   }
   function loop(now) {
+    if (!playing) return;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     set(t + dt * 8 * speed); // 1× plays a 100 s round in ~12 s
