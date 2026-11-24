@@ -5,23 +5,58 @@ Eli's entry in the **Cloud9 x JetBrains "Sky's The Limit" Hackathon 2026** (Devp
 **Deadline: Jan 12, 2027, 11:00am PT** (aim to submit by Jan 9). Judging Jan 27–Feb 3, 2027.
 Public repo: **https://github.com/ryzen-esc/opscope**.
 
-## Where things stand (updated Nov 23, 2026)
+## Where things stand (updated Nov 23, 2026, evening)
 - **All features and docs are done, reviewed and published.** 44 tests pass (`uv run pytest`).
+- **Design pass in progress** (Nov 23). Done and committed locally, **10 commits NOT pushed yet** (incl. this CLAUDE.md update) (`main` is ahead of
+  `origin/main`). Ask Eli before pushing.
+  - **Eli is reviewing the new Briefing report.** Next proposed step (waiting on Eli): give the Operator and Utility pages
+    the same "briefing" treatment (their right-hand rails still show a lot at once).
+  - Not visually verified: the branded loading screen (`SPLASH_HTML`); data loads in <1 s so it barely shows.
 - **Left (Eli's tasks, see `notes/SUBMISSION_CHECKLIST.md`):**
   - Eli's play-test.
   - Screenshots into `docs/screenshots/` (then add them to the README; there's a placeholder comment near its top).
-  - Demo video from `notes/DEMO_SCRIPT.md`, uploaded to YouTube as public.
+    Take them after the design pass settles.
+  - Demo video from `notes/DEMO_SCRIPT.md` (on-screen cues updated for the new layout), uploaded to YouTube as public.
   - Devpost submission from `notes/DEVPOST.md`.
   - Optional: more JetBrains AI use, then update the tool lists in README + DEVPOST.
 - **Done:** AI training opt-out for both JetBrains AI and Claude; repo public; README clone URL set.
 - **Before submitting:** run the final check. Fresh clone in the scratchpad → `uv sync` → `uv run pytest` → small build (`--series 2748746 --series 2972877`) → render all pages with `streamlit.testing.v1.AppTest`. Also re-check every number quoted in the docs against the app.
 
 ## The product (what judges see)
-Streamlit app (`app.py` → pages in `views/`):
-- **Scouting report** (front page): roster as of the team's last match; "Game plan vs X" (or a "Predictability check" for Cloud9 teams); ranked key tendencies; map pool; per-map breakdown (plant sites, predictable utility).
-- **Operator profiler:** Operator/Odin/Outlaw/Marshal. Who holds it, rate per map/side vs the typical team, position density by time window, kill sightlines, first-shot timing, pickups, full-buy win rates, setup style.
-- **Utility profiler:** casts by class and phase, habit spots (same spot within 4 m), aim arrows, and validated landing estimates for 12 damaging abilities.
-- **How it works:** the method and its limits, with live pipeline numbers.
+Streamlit app (`app.py` → pages in `views/`, page tabs in the top bar, filters in the sidebar):
+- **Scouting report** (front page), a one-screen **briefing**: quick-pick teams (Cloud9 self-scout, NRG, Sentinels, G2,
+  Cloud9 GC); dossier header (team, roster chips, record, attack/defense win rates); **"3 things to know about X"**
+  (Cloud9: "3 habits most worth varying"), each with rate, advice, evidence bar and a "View the …" link; the rest of the
+  game plan as one-line rows that expand on click; then **Details** tabs: all tendencies, map breakdown (plant sites,
+  predictable utility, tendency counts per map), map pool. The Side filter is greyed out here (the report covers both sides).
+- **Operator profiler:** Operator/Odin/Outlaw/Marshal. Map-first layout: one control bar (weapon, map, time in round,
+  kill lines), map on the left with a key above it (dots = holder positions, ring→✕ lines = kills, filtered by the same
+  time window), "At a glance" rail on the right (who holds it, rate vs typical team, full-buy win rates, first-shot timing),
+  rate by map below. Amber note under 8 gun rounds, or when a map has none ("that absence is the finding").
+- **Utility profiler:** casts by class and phase, habit spots (same spot within 4 m), aim arrows, and validated landing
+  estimates for 12 damaging abilities. Same map-first layout; view toggle "Cast spot / Landing (est.)".
+- **How it works:** five-step pipeline (read, correct, rebuild, compare, show) with live numbers, a labelled example of the
+  evidence bar, then the method and its limits.
+
+## Design (Nov 23 design pass)
+- **Style:** "tactical dossier", chosen by Eli from mockups: dark navy (`#0b0f14`), cyan accent `#00AEEF` (= defense),
+  red = attack, amber = "pay attention"; Chakra Petch headings, Inter body, JetBrains Mono numbers (Google Fonts via
+  `.streamlit/config.toml`); cut-corner panels; reticle logo (`assets/opscope-icon.svg`).
+- **Signature:** the **evidence bar** on every finding: the team's rate, its Wilson 95% range (shaded) and a grey tick for
+  the typical team. Category labels shown to users: Gun choice / Utility habit / Plant site (internal: Operator/Utility/Attack).
+- **Layout chosen by Eli:** "Briefing" (key insight first, details on demand), over tabbed / map board / ranked feed.
+- **No Riot art.** Eli asked for official agent icons and VALORANT backgrounds, then dropped the idea: the hackathon rules
+  bar third-party copyrighted material without permission and require compliance with Riot's developer policies, which
+  allow game assets only from Riot's own sources in products registered on the Developer Portal. Don't re-add them
+  without written permission. An original alternative (role-coloured hex badges, data-drawn map art) was mocked and declined.
+- **Code:** `ui/theme.py` (palette, Plotly template `opscope`, `chart()` which must be used instead of `st.plotly_chart`
+  because Streamlit's chart theme overrides the template, `count_axis()` for whole-number axes); `ui/brand.py` (icon,
+  wordmark, splash); `ui/cards.py` (all CSS, `evidence_bar`, `brief_card`, `plan_rows`, `dossier_header`, `page_header`,
+  `insight_card`, `rate_card`, `map_key`, `pipeline`, `evidence_anatomy`); `ui/links.py` ("View the …" links: a button
+  callback sets the target page's widget keys (`side`, `weapon`, `op_map`, `util_class`, `util_phase`, `util_map`,
+  `report_map_{team_id}`) plus a pending page, and the report calls `follow_link()` at its top to `st.switch_page`);
+  `ui/filters.py` (`sidebar(side_applies=)`, `quick_picks`); `ui/minimap.py` (smoothed floor + wall outlines, ATK/DEF
+  badges, `add_sites` with A/B/C letters, kill lines with shooter ring).
 
 Judging (equal weight): technical implementation (incl. depth of JetBrains tool use), design (complete product), impact, idea, and presentation (demo under 3 min). Bonus $1k: "Best AI-Powered Workflow Story", covered by `AI_SHOWCASE.md` (+ the dated log in `notes/AI_WORKFLOW_LOG.md`).
 
@@ -62,6 +97,11 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - Empty pandas frames: build boolean masks with an explicit `dtype=bool`.
 - Streamlit multiselects keep stale values: key them by their context. `use_container_width` is deprecated; use `width="stretch"`.
 - Library code under `src/` isn't hot-reloaded by Streamlit: restart the preview server after changing it.
+- The preview server started from this app gets stopped when the app closes its Browser pane; if Eli says the page won't
+  load, check `lsof -iTCP:8501` and restart it. Eli can also run `uv run streamlit run app.py` himself.
+- Plotly needs `automargin` (set in the template) and maps use `constrain="domain"` so spawn badges never get clipped.
+- Changing a widget's options can strand its session value; key widgets by their context (e.g. `report_map_{team_id}`,
+  the Utility agents multiselect).
 - The preview launch config lives at `/Users/eli/hackathon/.claude/launch.json` (name `opscope`, port 8501). PyCharm's "OpScope app" run config uses port 8502.
 
 ## Tools and workflow
@@ -76,3 +116,8 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 
 ## Working with Eli
 CS student (cybersecurity, math minor), strong in Python and C#, plays VALORANT, and his game knowledge has caught real mistakes (turrets do deal damage; fair comparisons across tiers and rosters). Explain data and format decisions briefly, check claims against the data before stating them, and keep commits focused.
+
+For design work, Eli likes to pick from 3–4 concrete options shown as mockups, then review the built result in Chrome and
+send screenshots of anything confusing. His first-look feedback has caught real problems (kill lines not following the
+time filter, empty-looking map panels, repeated findings, "too much information"), so treat "this is confusing" as a bug
+report: find the cause, fix it, and make the page explain itself.
