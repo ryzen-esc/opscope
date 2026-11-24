@@ -84,12 +84,17 @@ async function render() {
   try {
     const rep = await api.report(team, filters);
     if (token !== renderToken) return;
-    app.innerHTML = "";
+    const isCurrent = () => token === renderToken;
+    let d;
     if (view === "dashboard") {
-      dispose = await renderDashboard(app, { meta, team, filters, params: new URLSearchParams(location.search), setParams, navigate });
+      d = await renderDashboard(app, { meta, team, filters, params: new URLSearchParams(location.search), setParams, navigate, isCurrent });
     } else {
-      dispose = await renderOverview(app, { meta, team, report: rep, go: (v, extra = {}) => navigate({ view: v, ...extra }), setTeam });
+      app.innerHTML = "";
+      d = await renderOverview(app, { meta, team, report: rep, go: (v, extra = {}) => navigate({ view: v, ...extra }), setTeam });
     }
+    // A newer render started while this one was awaiting: undo whatever this one set up, keep the newer one's dispose.
+    if (!isCurrent()) return d();
+    dispose = d;
   } catch (e) {
     if (token !== renderToken) return;
     if (e instanceof ApiError && e.status === 503) return showSetup(e.body);

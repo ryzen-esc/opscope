@@ -176,3 +176,15 @@ def test_early_setup_is_sent_per_map(real):
     want = operator_report(Scope(team_id="79", weapon="operator", side="defender", maps=("haven",))).aggression_summary()
     assert a["n"] == want["n"] >= 8 and abs(a["percentile"] - want["percentile"]) < 1e-9
     assert all(m["aggression"] is None for m in op["maps"].values() if m["gun_rounds"] < 8)
+
+
+def test_filters_that_leave_no_games_return_an_empty_report(real):
+    # The dashboard used to read rep.pool before checking rep.empty and crashed, leaving no way to clear the
+    # filters. An empty report carries only what the front end needs to say so; the drawer's options still load.
+    rep = real.get("/api/report?team=79&patches=0.01").json()
+    assert rep["empty"] is True and rep["team"] == "79" and rep["name"] and rep["self_scout"] is True
+    assert "pool" not in rep and "insights" not in rep
+    tf = real.get("/api/team/79/filters").json()
+    assert tf["opponents"] and tf["events"] and tf["patches"]
+    assert real.get("/api/operator?team=79&side=defender&patches=0.01").json()["empty"] is True
+    assert real.get("/api/utility?team=79&side=defender&patches=0.01").json()["empty"] is True
