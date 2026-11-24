@@ -6,7 +6,7 @@ import { renderOperator } from "./operator.js";
 import { renderUtility } from "./utility.js";
 import { lenisStart, lenisStop } from "./motion.js";
 import { esc } from "./overview.js";
-import { segment, tooltip } from "./ui.js";
+import { oneOf, segment, tooltip } from "./ui.js";
 
 const SOON = '<i class="tsoon">soon</i>';
 const TABS = [["briefing", "Briefing"], ["operator", "Operator"], ["utility", "Utility"], ["pool", `Map pool${SOON}`]];
@@ -87,9 +87,9 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
     chips.innerHTML = `<button type="button" data-m="">All maps</button>` + pool.map((p) => `<button type="button" data-m="${p.map}"
       class="${perMap[p.map] ? "has" : ""}" title="${p.games} maps played">${esc(title(p.map))}${perMap[p.map] ? `<sup>${perMap[p.map]}</sup>` : ""}</button>`).join("");
     chips.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { setChip(b.dataset.m); ui._map?.(b.dataset.m); }));
-    setChip(params.get("map") || "");
+    setChip(oneOf(params.get("map"), pool.map((p) => p.map), ""));
 
-    ui.setSide = segment($("#sides"), SIDES, params.get("side") || "both", (k) => ui._side?.(k), "small");
+    ui.setSide = segment($("#sides"), SIDES, oneOf(params.get("side"), SIDES, "both"), (k) => ui._side?.(k), "small");
     ui.setMap = (m) => setChip(m || "");
     const chipBadges = (badges) => chips.querySelectorAll("button[data-m]").forEach((b) => {
       if (!b.dataset.m) return;
@@ -136,7 +136,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
         return;
       }
       if (k === "briefing") {
-        ui.setSide(new URLSearchParams(location.search).get("side") || "both");
+        ui.setSide(oneOf(new URLSearchParams(location.search).get("side"), SIDES, "both"));
         ui.legend.innerHTML = `<span><i class="dia" style="--c:var(--def)"></i>Utility habit spot</span><span><i style="--c:transparent;border:2px solid var(--def)"></i>Gun choice, usual area</span>
           <span><i class="zone"></i>Bomb site · their plant count</span><span style="color:var(--faint)">Blue = defense, red = attack</span>`;
         disposeTab = renderBriefing(ui, { rep, params: new URLSearchParams(location.search), setParams, tip, goTab, filterBanner });

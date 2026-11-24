@@ -5,6 +5,7 @@ import { evidenceBar } from "./evidence.js";
 import { COLORS, drawMap, el, findingAt } from "./map.js";
 import { countUp } from "./motion.js";
 import { esc } from "./overview.js";
+import { oneOf } from "./ui.js";
 
 const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -23,14 +24,16 @@ function adviceText(advice, ev, selfScout) {
 export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterBanner = "" }) {
   const disposers = [];
   const cats = [["All", "All"], ["Operator", "Gun choice"], ["Utility", "Utility habit"], ["Attack", "Plant site"]];
-  const st = { cat: params.get("cat") || "All", sel: params.has("sel") ? +params.get("sel") : null,
-    map: params.get("map") || "", side: params.get("side") || "both" };
+  // URL values are checked on read (a hand-edited link, or a sel kept from before the filters changed).
+  const st = { cat: oneOf(params.get("cat"), cats, "All"), sel: null,
+    map: oneOf(params.get("map"), rep.pool.map((p) => p.map), ""), side: oneOf(params.get("side"), ["attacker", "defender"], "both") };
   // Each plan item names its finding's exact position in the list (several findings can share map, side and counts).
   const planAt = new Map(rep.plan.map((p, j) => [p.index, j]).filter(([i]) => i >= 0));
   const items = rep.insights.map((ev, i) => {
     const plan = planAt.has(i) ? planAt.get(i) : -1;
     return { ev, i, advice: plan >= 0 ? rep.plan[plan] : null, plan: plan >= 0 ? plan + 1 : null };
   });
+  if (/^\d+$/.test(params.get("sel") || "") && +params.get("sel") < items.length) st.sel = +params.get("sel");
   const rank = (i) => `#${i + 1}`;
   const planTag = (n) => `Plan ${String(n).padStart(2, "0")}`;
   let map = null, mapName = null, token = 0;
@@ -239,11 +242,11 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     st.map = name;
     setParams({ map: name || null });
     renderCats(); renderList();
-    if (st.sel != null && name && items[st.sel].ev.map !== name) select(null);
+    if (st.sel != null && name && items[st.sel]?.ev.map !== name) select(null);
     showMap(name || items[st.sel ?? -1]?.ev.map || rep.record.most_played).then(drawLayers);
   });
   ui.onSide((side) => { st.side = side; setParams({ side: side === "both" ? null : side }); renderCats(); renderList(); drawLayers(); });
-  ui.zoom((f) => map?.focus(st.sel != null ? findingAt(map.geo, items[st.sel].ev) || null : null, f, 500));
+  ui.zoom((f) => map?.focus(st.sel != null && items[st.sel] ? findingAt(map.geo, items[st.sel].ev) || null : null, f, 500));
 
   const onKey = (e) => {
     if (e.target.closest?.("input, textarea") || !document.getElementById("palette").hidden) return;

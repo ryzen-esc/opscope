@@ -5,7 +5,7 @@ import { COLORS, drawMap, el } from "./map.js";
 import { TIME } from "./operator.js";
 import { esc } from "./overview.js";
 import { clockLabel, createTimeline } from "./timeline.js";
-import { segment } from "./ui.js";
+import { oneOf, segment } from "./ui.js";
 
 const CLASSES = [["trap", "Traps"], ["recon", "Recon"], ["smoke", "Smokes"], ["stall", "Stalls"], ["flash", "Flashes"], ["all", "All"]];
 const CLASS_LONG = { trap: "traps & setups", recon: "recon", smoke: "smokes", stall: "stalls", flash: "flashes", all: "utility" };
@@ -23,13 +23,14 @@ const when = (c) => (c.phase === "buy" ? `${clockLabel(c.t)} (buy phase)` : cloc
 
 export function renderUtility(ui, { team, filters, params, setParams, tip, filterBanner = "" }) {
   const st = {
-    cls: params.get("classes") || "trap", phase: params.get("phase") || "both", side: params.get("side") || "defender",
+    // URL values are checked on read: a hand-edited or stale link falls back instead of breaking the tab.
+    cls: oneOf(params.get("classes"), CLASSES, "trap"), phase: oneOf(params.get("phase"), PHASES, "both"),
+    side: oneOf(params.get("side"), ["attacker", "defender", "both"], "defender"),
     map: params.get("map") || "", view: params.get("uview") === "land" ? "land" : "cast",
     aim: params.has("aim") ? params.get("aim") === "1" : null, // null = the default for this utility type
     spots: params.get("spots") !== "0", hidden: new Set(), round: null, focusHabit: null,
     players: new Set(params.getAll("player")), // empty = the whole team
   };
-  if (st.side === "both" && !params.get("side")) st.side = "defender";
   // Thrown utility only shows where it was aimed (GRID doesn't record landings), so aim lines start on for it.
   const aimOn = () => (st.aim != null ? st.aim : !["trap", "all"].includes(st.cls));
   let data = null, map = null, geo = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map(), colors = {}, abilAll = [];

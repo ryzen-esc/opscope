@@ -7,9 +7,10 @@ import { COLORS, drawMap, el } from "./map.js";
 import { countUp } from "./motion.js";
 import { esc } from "./overview.js";
 import { clockLabel, createTimeline } from "./timeline.js";
-import { segment } from "./ui.js";
+import { oneOf, segment } from "./ui.js";
 
 const WEAPONS = [["operator", "Operator"], ["odin", "Odin"], ["outlaw", "Outlaw"], ["marshal", "Marshal"]];
+const SIDES = ["attacker", "defender", "both"];
 // Time in round as a cool-to-warm ramp (red stays reserved for kills and attack).
 export const TIME = [
   { from: 0, to: 20, label: "0–20s", color: "#8be4ff" },
@@ -32,8 +33,9 @@ function wilson(k, n) {
 }
 
 export function renderOperator(ui, { team, filters, params, setParams, tip, filterBanner = "" }) {
-  const st = { weapon: params.get("weapon") || "operator", side: params.get("side") || "defender", map: params.get("map") || "" };
-  if (st.side === "both" && !params.get("side")) st.side = "defender";
+  // URL values are checked on read: a hand-edited or stale link falls back instead of breaking the tab.
+  const st = { weapon: oneOf(params.get("weapon"), WEAPONS, "operator"), side: oneOf(params.get("side"), SIDES, "defender"),
+    map: params.get("map") || "" };
   let data = null, map = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map();
   ui.setSide(st.side);
 

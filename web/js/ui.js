@@ -15,6 +15,11 @@ export function segment(host, options, current, onPick, cls = "") {
   return set;
 }
 
+/** A URL value if it is one of the known keys (`options` = [[key, label], …] or [key, …]), else the fallback. */
+export function oneOf(value, options, fallback) {
+  return options.some((o) => (Array.isArray(o) ? o[0] : o) === value) ? value : fallback;
+}
+
 export function tooltip() {
   const t = document.createElement("div");
   t.className = "tip";
