@@ -67,6 +67,17 @@ def team_name(team_id: str) -> str:
     return team_labels().get(team_id, team_id)
 
 
+def base_label(peers: str) -> str:
+    """Short name for the comparison rate on a card or evidence bar: "typical team" or "typical player", or, when the
+    rate is pooled (too few teams for a typical one), "all other rounds" / "all other plants"."""
+    words = peers.split()
+    if len(words) >= 2 and words[0] == "typical":
+        return f"typical {words[-1]}"
+    if len(words) >= 3 and words[:2] == ["all", "other"]:
+        return f"all other {words[-1]}"
+    return peers
+
+
 def insight_json(i: Insight) -> dict:
     lo, hi = wilson(i.k, i.n)
     tags = {k: (v if isinstance(v, (str, int, float, bool)) or v is None else str(v)) for k, v in i.tags.items()}
@@ -77,7 +88,7 @@ def insight_json(i: Insight) -> dict:
     return {"category": i.category, "label": CATEGORY_LABELS.get(i.category, i.category), "map": i.map,
             "side": i.side, "text": i.text, "k": i.k, "n": i.n, "unit": i.unit, "sample": i.sample,
             "rate": _r(pct(i.k, i.n), 4), "lo": _r(lo, 4), "hi": _r(hi, 4), "base": _r(i.league_rate, 4),
-            "peers": i.peers, "departed": i.departed, "at": at, "tags": tags}
+            "peers": i.peers, "base_label": base_label(i.peers), "departed": i.departed, "at": at, "tags": tags}
 
 
 # ---- meta: teams, filters, data summary --------------------------------------------------------------

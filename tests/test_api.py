@@ -188,3 +188,22 @@ def test_filters_that_leave_no_games_return_an_empty_report(real):
     assert tf["opponents"] and tf["events"] and tf["patches"]
     assert real.get("/api/operator?team=79&side=defender&patches=0.01").json()["empty"] is True
     assert real.get("/api/utility?team=79&side=defender&patches=0.01").json()["empty"] is True
+
+
+def test_base_label_names_a_pooled_comparison():
+    # The card and evidence bar said "typical team" even when the rate was pooled over all other rounds
+    from opscope.present import base_label
+    assert base_label("typical VCT 2025 team") == "typical team"
+    assert base_label("typical Game Changers 2026 player") == "typical player"
+    assert base_label("all other Game Changers 2026 rounds") == "all other rounds"
+    assert base_label("all other VCT 2025 plants") == "all other plants"
+    assert base_label("other teams") == "other teams"
+
+
+def test_every_finding_says_what_its_comparison_is(real):
+    pooled = 0
+    for team in ("79", "3429"):
+        for ins in real.get(f"/api/report?team={team}").json()["insights"]:
+            pooled += ins["peers"].startswith("all other")
+            assert ins["base_label"].split()[0] == ins["peers"].split()[0], (team, ins["peers"], ins["base_label"])
+    assert pooled  # Cloud9 GC has at least one pooled comparison (Operator on attack on Summit)

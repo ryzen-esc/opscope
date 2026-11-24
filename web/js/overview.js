@@ -1,7 +1,7 @@
 // Overview: the first thing a coach sees. A hero dossier, then the three findings that matter most told one at a
 // time over a pinned map, then the rest of the game plan, then the way into the dashboard.
 import { api } from "./api.js";
-import { evidenceBar } from "./evidence.js";
+import { baseInSentence, baseLabel, evidenceBar } from "./evidence.js";
 import { COLORS, drawMap, findingAt } from "./map.js";
 import { countUp, onEnter, reduced, reveals, splitIn } from "./motion.js";
 
@@ -133,7 +133,6 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
       const s = document.createElement("article");
       s.className = "step";
       s.dataset.i = i;
-      const baseLabel = ev.category === "Utility" ? "typical player" : "typical team";
       s.innerHTML = `
         <div class="n">Plan 0${i + 1} <span class="chip ${cls}">${sideWord(ev.side)}</span> ${esc(title(ev.map))}</div>
         <div class="big ${cls}"><span class="pct">${Math.round(ev.rate * 100)}</span>%</div>
@@ -143,9 +142,9 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
         <h3>${p.headline}</h3>
         <p>${tipOnly(p.detail, ev)}</p>
         <div class="evwrap"></div>
-        <div class="range">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of the ${baseLabel} (${pct(ev.base)})` : ""}</div>
+        <div class="range">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of ${baseInSentence(ev)} (${pct(ev.base)})` : ""}</div>
         ${ev.departed ? `<div class="departed">${esc(ev.departed)}</div>` : ""}`;
-      const bar = evidenceBar(ev, { side: ev.side, baseLabel: baseLabel.replace("typical ", "typical ") });
+      const bar = evidenceBar(ev, { side: ev.side, baseLabel: baseLabel(ev) });
       s.querySelector(".evwrap").appendChild(bar.node);
       s._bar = bar;
       stepsEl.appendChild(s);

@@ -5,6 +5,11 @@ const pct = (v) => `${Math.round(v * 100)}%`;
 /** Keep a label inside the bar when its value sits near either end. */
 const edge = (v) => (v < 0.1 ? "transform:translateX(-4px)" : v > 0.9 ? "transform:translateX(calc(-100% + 4px))" : "");
 
+/** What the finding's comparison rate is: "typical team" / "typical player", or "all other rounds" when pooled. */
+export const baseLabel = (ev) => ev.base_label || (ev.category === "Utility" ? "typical player" : "typical team");
+/** The same, inside a sentence: "the typical team", but "all other rounds". */
+export const baseInSentence = (ev) => (baseLabel(ev).startsWith("all ") ? "" : "the ") + baseLabel(ev);
+
 /**
  * ev: {rate, lo, hi, base, k, n}. opts: {side: "attacker"|"defender", labels: true, baseLabel: "typical"}.
  * Returns {node, play(delay)}; the bar is drawn complete until play() animates it in.

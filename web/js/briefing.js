@@ -1,7 +1,7 @@
 // Dashboard · Briefing tab: every tendency in a ranked list, on the map, with its evidence card and where the team
 // plants on the map in view.
 import { api } from "./api.js";
-import { evidenceBar } from "./evidence.js";
+import { baseInSentence, baseLabel, evidenceBar } from "./evidence.js";
 import { COLORS, drawMap, el, findingAt } from "./map.js";
 import { countUp } from "./motion.js";
 import { esc } from "./overview.js";
@@ -209,7 +209,6 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     const c = ui.card;
     const noSpot = noSpotNote(ev);
     c.classList.remove("in");
-    const base = ev.category === "Utility" ? "typical player" : "typical team";
     // The link opens the tab as the finding was measured: Utility settings left from an earlier visit (phase, players,
     // landing view) would recompute the habits and could hide the one this card is about.
     const target = ev.category === "Operator" ? { tab: "operator", weapon: ev.tags?.weapon, map: ev.map, side: ev.side }
@@ -225,10 +224,10 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
         ${advice ? `<div class="advice"><small>${rep.self_scout ? "WORTH VARYING" : "GAME PLAN"}</small>${adviceText(advice, ev, rep.self_scout)}</div>` : ""}
         ${ev.departed ? `<div class="advice" style="border-color:var(--amb)">${esc(ev.departed)}</div>` : ""}
         ${noSpot ? `<div class="nospot">${noSpot}</div>` : ""}
-        <div class="src">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of the ${base} (${pct(ev.base)})` : ""}.
+        <div class="src">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of ${baseInSentence(ev)} (${pct(ev.base)})` : ""}.
           Rank ${rank(i)} of ${items.length}${items[i].plan ? ` · ${planTag(items[i].plan)} in the overview` : ""}.</div>
         ${target ? `<a class="go" href="#" id="cgo">See the ${ev.category === "Operator" ? esc(ev.tags?.label || "Operator") : "utility"} on ${esc(title(ev.map))}, round by round →</a>` : ""}`;
-      const b = evidenceBar(ev, { side: ev.side, baseLabel: base });
+      const b = evidenceBar(ev, { side: ev.side, baseLabel: baseLabel(ev) });
       c.querySelector("#cbar").appendChild(b.node);
       c.classList.add("in");
       b.play(150);
