@@ -221,6 +221,8 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
       b.classList.toggle("off", hide);
       st.focusHabit = null;
       renderRail(); drawLayers();
+      // Hiding an ability can empty the watched round and renumbers "Round k of n".
+      if (st.round != null && !order.includes(st.round)) watchRound(null); else renderNav();
     }));
   }
 
