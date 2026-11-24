@@ -127,12 +127,12 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
       ui.strip.className = "strip";
       if (k === "operator") {
         ui.rail.scrollTop = 0;
-        disposeTab = renderOperator(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip });
+        disposeTab = renderOperator(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip, filterBanner });
         return;
       }
       if (k === "utility") {
         ui.rail.scrollTop = 0;
-        disposeTab = renderUtility(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip });
+        disposeTab = renderUtility(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip, filterBanner });
         return;
       }
       if (k === "briefing") {

@@ -21,7 +21,7 @@ const pct = (v) => `${Math.round(v * 100)}%`;
 const clampT = (t) => Math.max(BUY_FROM, t);
 const when = (c) => (c.phase === "buy" ? `${clockLabel(c.t)} (buy phase)` : clockLabel(c.t));
 
-export function renderUtility(ui, { team, filters, params, setParams, tip }) {
+export function renderUtility(ui, { team, filters, params, setParams, tip, filterBanner = "" }) {
   const st = {
     cls: params.get("classes") || "trap", phase: params.get("phase") || "both", side: params.get("side") || "defender",
     map: params.get("map") || "", view: params.get("uview") === "land" ? "land" : "cast",
@@ -48,7 +48,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     data = d;
     if (d.empty || !d.maps_order.length) {
       ui.rail.innerHTML = `<div class="op-head"><div id="ucls"></div><div id="uphase" style="margin-top:8px"></div></div>
-        <p class="empty-note">No rounds match these filters.</p>`;
+        ${filterBanner}<p class="empty-note">No rounds match these filters.</p>`;
       controls();
       return;
     }
@@ -114,6 +114,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
             title="${p.n} casts on ${esc(p.agents.map(title).join(", "))}">${esc(p.player)} <small>${esc(p.agents.map(title).join(", "))}</small></button>`
             : `<button type="button" class="none" disabled title="Played ${esc(p.agents.map(title).join(", "))} on ${esc(title(st.map))}: no ${esc(CLASS_LONG[st.cls])} recorded">
               ${esc(p.player)} <small>${esc(p.agents.map(title).join(", "))} · no ${esc(CLASS_LONG[st.cls])} here</small></button>`).join("")}</div></div>
+      ${filterBanner}
       <section class="blk">
         <div class="k">${esc(title(CLASS_LONG[st.cls]))} · ${esc(title(st.map))} · ${esc(unit)} · ${st.players.size ? esc([...st.players].join(", ")) : esc(data.name)}</div>
         <h4 style="margin-top:12px">Habits <span>same spot within 4 m, in 40%+ of rounds on the agent</span></h4>

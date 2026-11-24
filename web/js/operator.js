@@ -31,7 +31,7 @@ function wilson(k, n) {
   return [Math.max(0, c - h), Math.min(1, c + h)];
 }
 
-export function renderOperator(ui, { team, filters, params, setParams, tip }) {
+export function renderOperator(ui, { team, filters, params, setParams, tip, filterBanner = "" }) {
   const st = { weapon: params.get("weapon") || "operator", side: params.get("side") || "defender", map: params.get("map") || "" };
   if (st.side === "both" && !params.get("side")) st.side = "defender";
   let data = null, map = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map();
@@ -46,7 +46,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     if (t !== token || !alive) return;
     data = d;
     if (d.empty) {
-      ui.rail.innerHTML = `<div class="op-head" id="weapons"></div><p class="empty-note">No rounds match these filters.</p>`;
+      ui.rail.innerHTML = `<div class="op-head" id="weapons"></div>${filterBanner}<p class="empty-note">No rounds match these filters.</p>`;
       weaponSeg();
       return;
     }
@@ -72,6 +72,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     const wr = (k, n) => `<b>${n ? pct(k / n) : "—"}</b> <span>${k} of ${n}</span>`;
     ui.rail.innerHTML = `
       <div class="op-head"><div id="weapons"></div></div>
+      ${filterBanner}
       <section class="blk">
         <div class="k">${esc(d.gun)} · ${esc(side)} rounds · ${esc(d.name)}</div>
         <div class="bigrow"><span class="big" id="opbig">${pct(r.rate)}</span>
