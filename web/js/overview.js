@@ -135,7 +135,7 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
       s.dataset.i = i;
       const baseLabel = ev.category === "Utility" ? "typical player" : "typical team";
       s.innerHTML = `
-        <div class="n">0${i + 1} <span class="chip ${cls}">${sideWord(ev.side)}</span> ${esc(title(ev.map))}</div>
+        <div class="n">Plan 0${i + 1} <span class="chip ${cls}">${sideWord(ev.side)}</span> ${esc(title(ev.map))}</div>
         <div class="big ${cls}"><span class="pct">${Math.round(ev.rate * 100)}</span>%</div>
         <div class="of"><b>${ev.k}</b> of <b>${ev.n}</b> ${esc(ev.unit)}</div>
         ${ev.base != null ? `<div class="peer">${esc(ev.peers)}: ${pct(ev.base)}</div>` : ""}
@@ -206,7 +206,7 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
     row.href = `?view=dashboard&team=${encodeURIComponent(team)}&sel=${idx}`;
     row.dataset.go = "dashboard";
     row.dataset.sel = idx;
-    row.innerHTML = `<div class="i">0${j + 4}</div>
+    row.innerHTML = `<div class="i"><small>PLAN</small>0${j + 4}</div>
       <div><div class="h">${p.headline}</div><div class="d">${esc(ev.label)} · ${esc(title(ev.map))}</div></div>
       <div class="eb"></div>
       <div class="m"><span class="chip ${sideCls(ev.side)}">${sideWord(ev.side)}</span>${ev.k}/${ev.n}</div>`;

@@ -19,7 +19,8 @@ import pandas as pd
 from opscope.analytics.antistrat import game_plan
 from opscope.analytics.insights import Insight, map_pool, plant_sites, pretty, team_insights
 from opscope.analytics.landing import add_landings, landing_model
-from opscope.analytics.operator import SETUP_WINDOW, Scope, _filter_rounds, league_scope, operator_report, team_rounds
+from opscope.analytics.operator import (SETUP_WINDOW, Scope, _filter_rounds, league_scope, operator_report,
+                                       season_weighted_rate, team_rounds)
 from opscope.analytics.roster import latest_roster, lineups_in, short_event
 from opscope.analytics.stats import MIN_SAMPLE, of, pct, wilson
 from opscope.analytics.utility import SPOT_RADIUS_CM, UtilityScope, utility_report
@@ -144,14 +145,20 @@ def _plants(team_id: str, map_name: str, f: Scope, items: list[Insight]) -> dict
     pl = plant_sites()[keys + ["site"]]
     team_pl = tr.merge(pl, on=keys)
     lg_pl = lg[lg["team_id"] != team_id].merge(pl, on=keys)
-    rows = []
+    rows, peers = [], set()
     for s in sites().get(map_name, []):
         k, n = int((team_pl["site"] == s["name"]).sum()), len(team_pl)
-        lk, ln = int((lg_pl["site"] == s["name"]).sum()), len(lg_pl)
-        rows.append({"site": s["name"], "k": k, "n": n, "rate": _r(pct(k, n), 4), "league_k": lk, "league_n": ln,
-                     "league_rate": _r(pct(lk, ln), 4)})
+        lo, hi = wilson(k, n)
+        # Same comparison as the plant-site tendencies: the typical other team in the same tier and season.
+        base, method = (season_weighted_rate(team_pl, lg_pl.assign(hit=lg_pl["site"] == s["name"]), "hit",
+                                             min_rounds=MIN_SAMPLE) if n and len(lg_pl) else (None, None))
+        if method:
+            peers.add(f"typical {cohort_label(lg_s.cohorts)} team" if method == "typical team"
+                      else f"all other {cohort_label(lg_s.cohorts)} plants")
+        rows.append({"site": s["name"], "k": k, "n": n, "rate": _r(pct(k, n), 4), "lo": _r(lo, 4), "hi": _r(hi, 4),
+                     "base": _r(base, 4)})
     return {"map": map_name, "attack_rounds": len(tr), "planted": len(team_pl), "sites": rows,
-            "league": f"Other {cohort_label(lg_s.cohorts)} teams' plants",
+            "peers": " / ".join(sorted(peers)) or f"typical {cohort_label(lg_s.cohorts)} team",
             "tendencies": sum(1 for i in items if i.map == map_name)}
 
 

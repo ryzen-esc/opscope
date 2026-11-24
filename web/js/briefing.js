@@ -23,12 +23,17 @@ function adviceText(advice, ev, selfScout) {
 /** Same finding? (the game plan carries its evidence; match it back to the full list) */
 const same = (a, b) => a.map === b.map && a.side === b.side && a.category === b.category && a.k === b.k && a.n === b.n;
 
-export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
+export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterBanner = "" }) {
   const disposers = [];
   const cats = [["All", "All"], ["Operator", "Gun choice"], ["Utility", "Utility habit"], ["Attack", "Plant site"]];
   const st = { cat: params.get("cat") || "All", sel: params.has("sel") ? +params.get("sel") : null,
     map: params.get("map") || "", side: params.get("side") || "both" };
-  const items = rep.insights.map((ev, i) => ({ ev, i, advice: rep.plan.find((p) => same(p.evidence, ev)) }));
+  const items = rep.insights.map((ev, i) => {
+    const plan = rep.plan.findIndex((p) => same(p.evidence, ev));
+    return { ev, i, advice: plan >= 0 ? rep.plan[plan] : null, plan: plan >= 0 ? plan + 1 : null };
+  });
+  const rank = (i) => `#${i + 1}`;
+  const planTag = (n) => `Plan ${String(n).padStart(2, "0")}`;
   let map = null, mapName = null, token = 0;
 
   const visible = () => items.filter(({ ev }) => (st.cat === "All" || ev.category === st.cat)
@@ -42,7 +47,9 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
       <div class="nums"><span><b>${r.wins}–${r.games - r.wins}</b>maps</span>
         <span><b style="color:var(--atk)">${pct(r.atk_won / r.atk_n)}</b>atk rounds</span>
         <span><b style="color:var(--def)">${pct(r.def_won / r.def_n)}</b>def rounds</span></div></div>
+    ${filterBanner}
     <div class="cats" id="cats"></div>
+    <div class="listhelp" id="listhelp"></div>
     <ol class="items" id="items"></ol>
     <p class="rail-foot">${esc(rep.rule)}</p>`;
   const catsEl = ui.rail.querySelector("#cats"), listEl = ui.rail.querySelector("#items");
@@ -58,8 +65,18 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
     }));
   }
 
+  function renderHelp(vis) {
+    const narrowed = [st.map && title(st.map), st.side !== "both" && sideWord(st.side), st.cat !== "All" && cats.find((c) => c[0] === st.cat)[1]]
+      .filter(Boolean);
+    ui.rail.querySelector("#listhelp").innerHTML = `
+      <div><b>${vis.length}</b> of ${items.length} tendencies${narrowed.length ? ` · ${esc(narrowed.join(" · "))}` : ""}</div>
+      <div><b>#</b> rank: #1 is the most unusual and best supported. Ranks don't change when you narrow the list.
+        <span class="plan-tag">Plan 01</span> = its number in the overview's ${rep.self_scout ? "list of habits to vary" : "game plan"}.</div>`;
+  }
+
   function renderList() {
     const vis = visible();
+    renderHelp(vis);
     if (!vis.length) {
       listEl.innerHTML = `<li class="empty-note">Nothing ${st.map ? `on ${esc(title(st.map))}` : "here"} differs from the typical
         ${esc(rep.peers)} team by enough to be sure (a tendency needs its 95% range clear of the typical rate, with 8+ rounds).</li>`;
@@ -67,9 +84,10 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
     }
     listEl.innerHTML = vis.map(({ ev, i }) => `
       <li class="item ${sideCls(ev.side)}${st.sel === i ? " on" : ""}" data-i="${i}" tabindex="0">
-        <div class="i">${String(i + 1).padStart(2, "0")}</div>
+        <div class="i" title="Rank ${i + 1} of ${items.length}">${rank(i)}</div>
         <div class="t">${ev.text}</div>
-        <div class="meta"><span class="chip ${sideCls(ev.side)}">${ev.side === "attacker" ? "ATK" : "DEF"}</span>${esc(ev.label)} · ${esc(title(ev.map))} · ${ev.k}/${ev.n}</div>
+        <div class="meta"><span class="chip ${sideCls(ev.side)}">${ev.side === "attacker" ? "ATK" : "DEF"}</span>${esc(ev.label)} · ${esc(title(ev.map))} · ${ev.k}/${ev.n}${
+          items[i].plan ? `<span class="plan-tag">${planTag(items[i].plan)}</span>` : ""}</div>
         ${ev.departed ? `<div class="departed">${esc(ev.departed)}</div>` : ""}
         <div class="eb"></div></li>`).join("");
     listEl.querySelectorAll(".item").forEach((li) => {
@@ -123,7 +141,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
       }
       el("circle", { r: 20, fill: "transparent" }, g); // a bigger hit area
       g.addEventListener("click", () => select(i));
-      g.addEventListener("mouseenter", (e) => tip.show(e, `<b>${String(i + 1).padStart(2, "0")}</b> ${plain(ev.text).slice(0, 140)}…`));
+      g.addEventListener("mouseenter", (e) => tip.show(e, `<b>${rank(i)}</b> ${esc(plain(ev.text).slice(0, 140))}…`));
       g.addEventListener("mousemove", (e) => tip.move(e));
       g.addEventListener("mouseleave", () => tip.hide());
     }
@@ -137,9 +155,10 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
     }
     ui.strip.innerHTML = `<div class="ttl">Where they plant<b>${esc(title(name))} attack</b></div>
       <div class="sites">${p.sites.map((s) => `<div class="site"><div class="row1"><b>${esc(s.site.replace(" site", ""))}</b>
-        <span>${s.k}/${s.n} · ${pct(s.rate || 0)}</span></div>
-        <div class="tr"><div class="fi" data-w="${(s.rate || 0) * 100}"></div><div class="lg" style="left:${(s.league_rate || 0) * 100}%" title="${esc(p.league)}: ${pct(s.league_rate || 0)}"></div></div></div>`).join("")}</div>
-      <p class="note">${p.planted} planted of ${p.attack_rounds} attack rounds. Tick: ${esc(p.league)} (${p.sites.map((s) => `${s.site[0]} ${pct(s.league_rate || 0)}`).join(", ")}).</p>`;
+        <span><span style="color:var(--ink)">${pct(s.rate || 0)}</span> · ${s.k} of ${s.n} plants</span></div>
+        <div class="tr"><div class="fi" data-w="${(s.rate || 0) * 100}"></div>${s.base != null ? `<div class="lg" style="left:${s.base * 100}%"></div>` : ""}</div>
+        ${s.base != null ? `<div class="lgl" style="left:${s.base * 100}%">typical ${pct(s.base)}</div>` : ""}</div>`).join("")}</div>
+      <p class="note">Bar: share of their ${p.planted} plants (from ${p.attack_rounds} attack rounds). Tick: the ${esc(p.peers)}.</p>`;
     requestAnimationFrame(() => ui.strip.querySelectorAll(".fi").forEach((f) => (f.style.width = `${f.dataset.w}%`)));
   }
 
@@ -149,7 +168,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
     setParams({ sel: i == null ? null : i });
     listEl.querySelectorAll(".item").forEach((li) => li.classList.toggle("on", +li.dataset.i === i));
     ui.stage.classList.toggle("carded", i != null);
-    if (i == null) { ui.card.classList.remove("in"); map?.layers.top.replaceChildren(); map?.focus(null, 1, 700); return; }
+    if (i == null) { ui.note.classList.remove("on"); ui.card.classList.remove("in"); map?.layers.top.replaceChildren(); map?.focus(null, 1, 700); return; }
     const { ev, advice } = items[i];
     const li = listEl.querySelector(`[data-i="${i}"]`);
     li?.scrollIntoView({ block: "nearest", behavior: fromKey ? "auto" : "smooth" });
@@ -167,11 +186,24 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
       else if (at) { m.focus(at, 1.5, 1000, { shift }); m.pulse(at, color, null, { r: 22 }); }
       else m.focus(null, 1, 700);
     }, fresh ? 700 : 0);
+    ui.note.textContent = ev.category === "Attack" ? "" : (at ? "" : "Whole map: this finding has no single spot");
+    ui.note.classList.toggle("on", !!ui.note.textContent);
     renderCard(ev, advice, i);
+  }
+
+  /** Why a finding has no pin on the map, in one line (null when it has one). */
+  function noSpotNote(ev) {
+    if (ev.category === "Attack") return "On the map: the highlighted site is where they plant.";
+    if (map && findingAt(map.geo, ev)) return null;
+    if (ev.category === "Operator") return ev.tags?.direction === "less"
+      ? `No single spot: this is about how rarely they buy the ${esc(ev.tags?.label || "Operator")} on this map, so the whole map is shown.`
+      : `No single spot: the holder isn't seen in one area often enough to name it, so the whole map is shown.`;
+    return "No single spot for this one, so the whole map is shown.";
   }
 
   function renderCard(ev, advice, i) {
     const c = ui.card;
+    const noSpot = noSpotNote(ev);
     c.classList.remove("in");
     const base = ev.category === "Utility" ? "typical player" : "typical team";
     const target = ev.category === "Operator" ? { tab: "operator", weapon: ev.tags?.weapon, map: ev.map, side: ev.side }
@@ -185,7 +217,9 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip }) {
         <div id="cbar"></div>
         ${advice ? `<div class="advice"><small>${rep.self_scout ? "WORTH VARYING" : "GAME PLAN"}</small>${adviceText(advice, ev, rep.self_scout)}</div>` : ""}
         ${ev.departed ? `<div class="advice" style="border-color:var(--amb)">${esc(ev.departed)}</div>` : ""}
-        <div class="src">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of the ${base} (${pct(ev.base)})` : ""} · #${i + 1} of ${items.length}</div>
+        ${noSpot ? `<div class="nospot">${noSpot}</div>` : ""}
+        <div class="src">95% range ${pct(ev.lo)}–${pct(ev.hi)}${ev.base != null ? `, clear of the ${base} (${pct(ev.base)})` : ""}.
+          Rank ${rank(i)} of ${items.length}${items[i].plan ? ` · ${planTag(items[i].plan)} in the overview` : ""}.</div>
         ${target ? `<a class="go" href="#" id="cgo">See the ${ev.category === "Operator" ? esc(ev.tags?.label || "Operator") : "utility"} on ${esc(title(ev.map))}, round by round →</a>` : ""}`;
       const b = evidenceBar(ev, { side: ev.side, baseLabel: base });
       c.querySelector("#cbar").appendChild(b.node);

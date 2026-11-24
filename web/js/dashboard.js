@@ -5,14 +5,15 @@ import { renderBriefing } from "./briefing.js";
 import { lenisStart, lenisStop } from "./motion.js";
 import { esc } from "./overview.js";
 
-const TABS = [["briefing", "Briefing"], ["operator", "Operator"], ["utility", "Utility"], ["pool", "Map pool"]];
+const SOON = '<i class="tsoon">soon</i>';
+const TABS = [["briefing", "Briefing"], ["operator", `Operator${SOON}`], ["utility", `Utility${SOON}`], ["pool", `Map pool${SOON}`]];
 const SIDES = [["both", "Both"], ["attacker", "Attack"], ["defender", "Defense"]];
 const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 
 /** A segmented control with a sliding indicator. */
 function segment(host, options, current, onPick, cls = "") {
   host.className = `seg ${cls}`;
-  host.innerHTML = `<div class="ind"></div>` + options.map(([k, l]) => `<button type="button" data-k="${k}">${esc(l)}</button>`).join("");
+  host.innerHTML = `<div class="ind"></div>` + options.map(([k, l]) => `<button type="button" data-k="${k}">${l}</button>`).join(""); // labels are trusted constants
   const ind = host.querySelector(".ind");
   const set = (k) => {
     host.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === k));
@@ -46,15 +47,18 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   <div class="board-wrap">
     <div class="dbar">
       <div id="tabs"></div>
+      <span class="dlabel" title="Map and side only narrow what's shown; they don't change any number.">Show</span>
       <div class="mapchips" id="mapchips" role="toolbar" aria-label="Map"></div>
       <div id="sides"></div>
-      <button class="fbtn${nFilters ? " active" : ""}" id="fbtn" type="button">Filters${nFilters ? ` <b>${nFilters}</b>` : ""}</button>
+      <button class="fbtn${nFilters ? " active" : ""}" id="fbtn" type="button"
+        title="Opponents, event and patch: every number is recomputed for the matches you keep.">Filters${nFilters ? ` <b>${nFilters}</b>` : ""}</button>
     </div>
     <aside class="rail" id="rail" data-lenis-prevent></aside>
     <section class="bstage" id="bstage">
       <svg id="bmap"></svg>
       <div class="hud" id="hud"></div>
       <div class="legend" id="legend"></div>
+      <div class="stagenote" id="stagenote"></div>
       <div class="ecard" id="ecard" data-lenis-prevent></div>
       <div class="zoomctl"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button></div>
     </section>
@@ -64,6 +68,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   const $ = (s) => app.querySelector(s);
   const ui = {
     rail: $("#rail"), svg: $("#bmap"), hud: $("#hud"), legend: $("#legend"), card: $("#ecard"), strip: $("#strip"), stage: $("#bstage"),
+    note: $("#stagenote"),
     _map: null, _side: null, _zoom: null,
     onMap(fn) { this._map = fn; }, onSide(fn) { this._side = fn; }, zoom(fn) { this._zoom = fn; },
   };
@@ -84,6 +89,16 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
 
   segment($("#sides"), SIDES, params.get("side") || "both", (k) => ui._side?.(k), "small");
 
+  // When filters are on, say so where the numbers are read, with a way out.
+  const fnames = [
+    ...filters.opponents.map((id) => `vs ${tf.opponents.find((o) => o.id === id)?.name || id}`),
+    ...filters.events.map((e) => e.replace(/^VCT [^-]+ - /, "")),
+    ...filters.patches.map((p) => `patch ${p}`),
+  ];
+  const filterBanner = fnames.length ? `<div class="fbanner"><span><b>Filtered:</b> every number is recomputed for ${esc(fnames.join(", "))}.</span>
+    <button type="button" data-clear-filters>Clear</button></div>` : "";
+  ui.rail.addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) navigate({ opponents: [], patches: [], events: [] }); });
+
   // ---- tabs ----
   function showTab(k) {
     disposeTab();
@@ -91,12 +106,13 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
     setParams({ tab: k === "briefing" ? null : k });
     ui.card.classList.remove("in");
     ui.stage.classList.remove("carded");
+    ui.note.classList.remove("on");
     ui.legend.innerHTML = "";
     ui._map = ui._side = ui._zoom = null;
     if (k === "briefing") {
-      ui.legend.innerHTML = `<span><i class="dia" style="--c:var(--def)"></i>Utility habit</span><span><i style="--c:transparent;border:2px solid var(--def)"></i>Gun choice</span>
-        <span><i class="zone"></i>Plant site (count = their plants)</span>`;
-      disposeTab = renderBriefing(ui, { rep, params: new URLSearchParams(location.search), setParams, tip, goTab });
+      ui.legend.innerHTML = `<span><i class="dia" style="--c:var(--def)"></i>Utility habit spot</span><span><i style="--c:transparent;border:2px solid var(--def)"></i>Gun choice, usual area</span>
+        <span><i class="zone"></i>Bomb site · their plant count</span><span style="color:var(--faint)">Blue = defense, red = attack</span>`;
+      disposeTab = renderBriefing(ui, { rep, params: new URLSearchParams(location.search), setParams, tip, goTab, filterBanner });
     } else {
       const names = { operator: ["Operator profiler", "Step 5: who holds it, where, and the round-by-round timeline."],
         utility: ["Utility profiler", "Step 6: where utility goes, habit spots and landings, on the timeline."],

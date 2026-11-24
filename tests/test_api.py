@@ -72,6 +72,8 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
     haven = next(i for i in rep["insights"] if i["category"] == "Operator" and i["map"] == "haven"
                  and i["side"] == "defender")
     assert (haven["k"], haven["n"], round(haven["base"], 2)) == (30, 80, 0.19)  # quoted in README/CLAUDE.md
+    lotus_plants = next(p for p in rep["plants"] if p["map"] == "lotus")
+    assert lotus_plants["peers"].startswith("typical") and all(s["base"] is not None for s in lotus_plants["sites"])
 
     op = real.get("/api/operator?team=79&weapon=operator&side=defender").json()
     assert op["maps"]["haven"]["gun_rounds"] == 30
