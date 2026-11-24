@@ -147,7 +147,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
     rank = new Map(order.map((r, i) => [r, i + 1]));
     st.round = null;
     for (const p of m.positions) {
-      const g = el("g", { opacity: 0, class: "dot" }, map.layers.data);
+      const g = el("g", { opacity: 0, class: "dot", style: "pointer-events:none" }, map.layers.data); // draw() turns hover on when shown
       el("circle", { cx: p.at[0], cy: p.at[1], r: 15, fill: timeColor(p.t), opacity: .1 }, g);
       const core = el("circle", { cx: p.at[0], cy: p.at[1], r: 4.5, fill: timeColor(p.t), stroke: COLORS.bg, "stroke-width": 1,
         "vector-effect": "non-scaling-stroke" }, g);
@@ -165,7 +165,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
       layer.dots.push({ g, p, shown: -1 });
     }
     for (const k of m.kills) {
-      const g = el("g", { opacity: 0, class: "kill" }, map.layers.top);
+      const g = el("g", { opacity: 0, class: "kill", style: "pointer-events:none" }, map.layers.top);
       const ln = el("line", { x1: k.from[0], y1: k.from[1], x2: k.to[0], y2: k.to[1], stroke: COLORS.atk, "stroke-width": 1.6,
         "vector-effect": "non-scaling-stroke", pathLength: 1, "stroke-dasharray": "1 1", "stroke-dashoffset": 1 }, g);
       el("circle", { cx: k.from[0], cy: k.from[1], r: 9, fill: "none", stroke: COLORS.atk, "stroke-width": 1.8, "vector-effect": "non-scaling-stroke" }, g);
@@ -286,7 +286,8 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
       const age = t - d.p.t;
       const on = (only == null || d.p.round === only) && age >= 0 && (mode === "build" || age <= MOMENT);
       const op = !on ? 0 : mode === "build" ? 1 : 1 - (age / MOMENT) * 0.85;
-      if (op !== d.shown) { d.g.setAttribute("opacity", op); d.shown = op; }
+      // Opacity doesn't stop SVG hit-testing: a hidden dot must not answer hover or clicks.
+      if (op !== d.shown) { d.g.setAttribute("opacity", op); d.g.style.pointerEvents = op ? "" : "none"; d.shown = op; }
       if (on) {
         seen.add(d.p.round);
         if (d.p.area) { if (!areas.has(d.p.area)) areas.set(d.p.area, new Set()); areas.get(d.p.area).add(d.p.round); }
@@ -298,6 +299,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
       const visible = (only == null || k.k.round === only) && age >= 0 && (mode === "build" || age <= MOMENT);
       const q = Math.max(0, Math.min(1, age / 1.2));
       k.g.setAttribute("opacity", visible ? (mode === "build" ? 1 : 1 - (age / MOMENT) * 0.7) : 0);
+      k.g.style.pointerEvents = visible ? "" : "none"; // hidden kill lines would block the dots below them
       k.ln.setAttribute("stroke-dashoffset", 1 - q);
       k.x.setAttribute("opacity", q >= 1 ? 1 : 0);
       if (visible && q >= 1) kills++;

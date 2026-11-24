@@ -237,7 +237,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
     for (const c of visibleCasts()) {
       const land = st.view === "land" && c.land;
       const at = land ? c.land : c.at, col = colors[c.ability];
-      const g = el("g", { opacity: 0, class: "dot" }, map.layers.data);
+      const g = el("g", { opacity: 0, class: "dot", style: "pointer-events:none" }, map.layers.data); // draw() turns hover on when shown
       if (land) el("line", { x1: c.at[0], y1: c.at[1], x2: c.land[0], y2: c.land[1], stroke: col, "stroke-opacity": .45, "stroke-width": 1,
         "stroke-dasharray": "3 3", "vector-effect": "non-scaling-stroke" }, g);
       else if (aimOn() && c.aim) el("line", { x1: c.at[0], y1: c.at[1], x2: c.aim[0], y2: c.aim[1], stroke: col, "stroke-opacity": .5,
@@ -349,7 +349,8 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
       const ct = clampT(d.c.t), age = t - ct;
       const on = (only == null || d.c.round === only) && age >= 0 && (mode === "build" || age <= MOMENT);
       const op = !on ? 0 : mode === "build" ? 1 : 1 - (age / MOMENT) * 0.85;
-      if (op !== d.shown) { d.g.setAttribute("opacity", op); d.shown = op; }
+      // Opacity doesn't stop SVG hit-testing: a hidden dot must not answer hover or clicks.
+      if (op !== d.shown) { d.g.setAttribute("opacity", op); d.g.style.pointerEvents = op ? "" : "none"; d.shown = op; }
       if (on) { n++; rounds.add(d.c.round); byAb[d.c.ability_name] = (byAb[d.c.ability_name] || 0) + 1; }
     }
     if (only != null) trace(only, t);
