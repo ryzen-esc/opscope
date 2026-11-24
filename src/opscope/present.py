@@ -234,7 +234,7 @@ def _weapon(w) -> str:
 
 
 def _moments(pos: pd.DataFrame) -> pd.DataFrame:
-    """Merge a holder's recorded positions into moments (same round, time and spot) and say what happened in each.
+    """Merge a holder's recorded positions into moments (same round and shown time) and say what happened in each.
 
     A trade puts several events on one spot at one time (the holder's kill and the hit they took), so one dot
     carries every line: "killed novaa with the Operator (150 dmg)", "took 40 from novaa's Vandal".
@@ -244,8 +244,13 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
     d = load()
     names = _player_names()
     keys = ["game_id", "round_num", "t"]
+    # Group on the time shown (0.1 s): GRID sometimes logs a kill 1 ms after its damage, and the two belong to
+    # one moment ("killed X with the Operator (150 damage)"), not two stacked dots. The dot sits at the first
+    # position logged in that tick (a cast and a hit can be logged a metre apart).
+    pos = pos.sort_values(keys, kind="stable").assign(t=lambda p: p["t"].round(1))
     who = pos[keys + ["player_id"]].drop_duplicates()
     e = d.engagements[keys + ["kind", "actor_id", "target_id", "weapon", "damage"]]
+    e = e.assign(t=e["t"].round(1))
     lines: dict[tuple, list[str]] = {}
 
     def add(key, text):
@@ -265,12 +270,14 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
         name = names.get(a, "an enemy")
         add((g, rn, t, tgt), f"was killed by {name}'s {w}" if (x["kind"] == "kill").any()
             else f"took {dmg:.0f} from {name}'s {w}")
-    c = d.casts[keys + ["player_id", "ability"]].merge(who, on=keys + ["player_id"])
+    c = d.casts[keys + ["player_id", "ability"]]
+    c = c.assign(t=c["t"].round(1)).merge(who, on=keys + ["player_id"])
     for (g, rn, t, pid), x in c.groupby(keys + ["player_id"]):
         for ab in x["ability"].unique():
             add((g, rn, t, pid), f"used {pretty(ab)}")
-    grouped = (pos.groupby(keys + ["player_id", "x", "y"], sort=False)
-               .agg(player_name=("player_name", "first"), agent=("agent", "first"), source=("source", lambda v: sorted(set(v))))
+    grouped = (pos.groupby(keys + ["player_id"], sort=False)
+               .agg(x=("x", "first"), y=("y", "first"), player_name=("player_name", "first"), agent=("agent", "first"),
+                    source=("source", lambda v: sorted(set(v))))
                .reset_index())
     grouped["what"] = [lines.get((g, rn, t, pid), []) for g, rn, t, pid in
                        zip(grouped["game_id"], grouped["round_num"], grouped["t"], grouped["player_id"])]

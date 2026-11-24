@@ -157,3 +157,12 @@ def test_rounds_carry_their_full_start_time(real):
         by_day.setdefault(r["date"], set()).add((r["started"], r["game"]))
     assert any(len(g) > 1 for g in by_day.values())  # the case that used to fall back to the game id
     assert all(len({s for s, _ in g}) == len(g) for g in by_day.values())  # and the start time tells them apart
+
+
+def test_one_dot_per_moment(real):
+    # GRID logs some kills 1 ms after their damage (9.499 dmg, 9.500 kill): both show as 0:09.5, so they are one
+    # moment, not two stacked dots ("hit X for 150" and "killed X" with no damage).
+    op = real.get("/api/operator?team=79&weapon=operator&side=defender").json()
+    for name, m in op["maps"].items():
+        keys = [(p["round"], p["t"], p["player"]) for p in m["positions"]]
+        assert len(keys) == len(set(keys)), name
