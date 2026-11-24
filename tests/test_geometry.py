@@ -94,7 +94,7 @@ def test_markers_on_a_wall_snap_onto_the_floor():
     assert G.snap_to_floor([10, 10], rings) == [10, 10]
 
 
-# ---- map_geometry: the offline fallback ------------------------------
+# ---- map_geometry: one rotation for every layer, and the offline fallback ------------------------------
 
 def _minimap_image() -> np.ndarray:
     """A 100 px synthetic minimap: grey floor, and an olive plant zone round each site centre below."""
@@ -125,6 +125,36 @@ def geo_map(monkeypatch, tmp_path):
         monkeypatch.setattr(opscope.maps, "spawns", lambda m: {"attacker": (ax, ay), "defender": (-ax, -ay)})
         return "testmap"
     return set_attacker, tmp_path
+
+
+# Attacker spawn in game units -> where it sits on the unrotated minimap -> quarter turns that bring it down.
+@pytest.mark.parametrize("attacker, turns", [((-4000, 0), 0),   # bottom already
+                                             ((0, 4000), 1),    # right
+                                             ((4000, 0), 2),    # top
+                                             ((0, -4000), 3)])  # left
+def test_every_layer_shares_one_rotation_with_attackers_at_the_bottom(geo_map, attacker, turns):
+    set_attacker, tmp_path = geo_map
+    m = set_attacker(*attacker)
+    g = G.map_geometry(m)
+    assert g["turns"] == turns and g["source"] == G.TRACED
+    assert (tmp_path / "geometry" / "testmap.json").exists()
+    # markers and data go through the same turn, exactly once: to_view() of the game position is the payload's
+    sp = {"attacker": attacker, "defender": (-attacker[0], -attacker[1])}
+    for side, (x, y) in sp.items():
+        u, v = G.to_view(m, x, y)
+        assert g["spawns"][side] == pytest.approx([float(u), float(v)], abs=0.1)
+        assert np.allclose(G.rotate(*G.to_minimap(m, x, y), turns), (u, v))
+    assert g["spawns"]["attacker"][1] > g["spawns"]["defender"][1]   # attackers start at the bottom
+    assert g["spawns"]["attacker"][1] > 800
+    for s, (x, y) in zip(g["sites"], [(2000, -2000), (-2000, 2000)]):
+        assert s["at"] == pytest.approx([float(c) for c in G.to_view(m, x, y)], abs=0.1)
+    assert g["callouts"][0]["at"] == pytest.approx([float(c) for c in G.to_view(m, 300, 200)], abs=0.1)
+    # the traced layers turn with them: each site centre lies inside the plant zone named after it, on the floor
+    zones = {a["name"]: a["ring"] for a in g["site_areas"]}
+    assert set(zones) == {"A", "B"}
+    for s in g["sites"]:
+        assert G.inside(s["at"], [zones[s["name"]]])
+        assert G.inside(s["at"], g["rings"])
 
 
 def test_offline_fallback_is_not_cached_for_good_and_its_view_keeps_every_marker(geo_map, monkeypatch):

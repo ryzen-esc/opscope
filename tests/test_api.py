@@ -82,6 +82,7 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
 
     g = real.get("/api/map/haven").json()
     assert g["rings"] and len(g["sites"]) == 3 and set(g["spawns"]) == {"attacker", "defender"}
+    assert g["spawns"]["attacker"][1] > g["spawns"]["defender"][1]  # turned so attackers start at the bottom
 
     rep = real.get("/api/report?team=79").json()
     assert rep["self_scout"] and rep["plan"] and rep["insights"]
