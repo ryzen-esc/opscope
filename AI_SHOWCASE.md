@@ -45,9 +45,13 @@ Before changing anything, we confirmed both fixes stay within the provided data.
 ### 8. The human catches the AI
 Claude Code told me turrets deal no damage. I knew that was wrong and checked a search to be sure. The data agreed with me: 1,890 turret damage events. Turrets still had to be excluded, but for a better reason, which is now documented: a turret's victims stand ~23 m from the turret, so they can't locate it. Claude Code caught two more of its own overclaims while writing the in-app methodology page ("±1 m precision" was never measured, and "replayed maps" were really "cancelled map starts").
 
+### 9. Reviewing the review
+Before finishing the new web app, I had Claude Code run a review with a team of agents: five reviewers, each on one area (whether every number matches the analytics, map coordinates, round timing, filters, data safety), and for each area a second agent whose only job was to disprove what the reviewer found. 25 findings survived. One went deeper than the web app: floating-point rounding left the 95% range for "0 of n" a hair above 0, so a team that never bought the Odin, when the typical team also never does, was listed as a tendency. That was 95 fake findings across 63 teams, 12 of them in game plans. I approved the fix, the only change to the analytics. Then each fix went to a fresh reviewer, which found that one of them had made a hidden line visible that read backwards on attack. Fixes need review too.
+
 ## Keeping licensed data safe with AI tools
 
 - **No data in the repo:** the data stays in its own clone, outside the project. The cache and every derived table are gitignored, and staged files are checked before every commit.
+- **Local only:** the web app serves the data on 127.0.0.1, and the review found it would also answer a web page that points its own hostname at 127.0.0.1 (DNS rebinding). It now refuses any request not addressed to 127.0.0.1 or localhost.
 - **Synthetic tests:** tests and Junie prompts use **synthetic** events only; Junie's guidelines (`.junie/guidelines.md`) forbid real data in tests or prompts.
 - **Opt-outs:** training on my inputs is turned off for both AI tools that saw the code (JetBrains AI: detailed data collection off; Claude: privacy setting off), as the data license requires.
 - **Community data:** only aggregate positions (site centres) and community callouts are committed. Both contain no match data.
