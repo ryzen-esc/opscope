@@ -7,7 +7,7 @@ from opscope.analytics.landing import landing_model
 from opscope.analytics.stats import MIN_SAMPLE
 from opscope.analytics.utility import SPOT_RADIUS_CM
 from opscope.ingest.build import cache_dir
-from opscope.ui.cards import page_header, stat_card
+from opscope.ui.cards import evidence_anatomy, page_header, pipeline
 from opscope.zones import SITE_RADIUS_CM
 
 page_header("How it works", "Scouting you can check", "The method, how it was validated, and where the data stops")
@@ -19,19 +19,26 @@ report_path = cache_dir() / "ingest_report.json"
 rep = json.loads(report_path.read_text()) if report_path.exists() else {}
 rows, totals = rep.get("table_rows", {}), rep.get("totals", {})
 if rows:
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        stat_card("Series read", f"{rep.get('built_series', 0):,}", f"{totals.get('events', 0):,} events")
-    with c2:
-        stat_card("Rounds", f"{rows.get('rounds', 0):,}", f"{rows.get('games', 0):,} maps, all matching official scores")
-    with c3:
-        stat_card("Ability casts", f"{rows.get('casts', 0):,}",
-                  f"{totals.get('casts_supplemented', 0) / max(rows.get('casts', 1), 1):.1%} with precise positions")
-    with c4:
-        stat_card("Corrections applied", f"{totals.get('rollback_applied', 0):,}",
-                  f"undone events, incl. {totals.get('rolled_back_games', 0)} cancelled map starts")
+    precise = totals.get("casts_supplemented", 0) / max(rows.get("casts", 1), 1)
+    pipeline([
+        ("Read", f"{rep.get('built_series', 0):,}", f"series of GRID match events, {totals.get('events', 0):,} in all, "
+                                                    f"streamed straight from the compressed files"),
+        ("Correct", f"{totals.get('rollback_applied', 0):,}", f"events undone by GRID's own corrections, including "
+                                                             f"{totals.get('rolled_back_games', 0)} cancelled map starts"),
+        ("Rebuild", f"{rows.get('rounds', 0):,}", f"rounds on {rows.get('games', 0):,} maps, all matching the official "
+                                                  f"scores; {rows.get('casts', 0):,} ability casts, {precise:.1%} with "
+                                                  f"precise positions"),
+        ("Compare", "same tier", "each team against the typical other team in its own tier and season, on the same "
+                                 "map and side (the median team, so one extreme team can't move it)"),
+        ("Show", "k of n", "every finding with its sample, its 95% range and the comparison, so a coach can "
+                           "check it instead of trusting it"),
+    ])
 
-st.header("Reading a card")
+st.header("How to read a finding")
+evidence_anatomy(30, 80, 0.19, "Cloud9 bought the Operator in 30 of 80 Haven defense rounds; the typical VCT 2025 "
+                               "team did in 19%.")
+
+st.header("The rules behind every card")
 st.markdown(f"""
 - **"48 of 64 rounds"** is the evidence: how often it happened and out of how many chances.
 - **Typical team** ("typical VCT 2025 team", etc.) is the median of every other team's own rate in the **same tier and season**, on the same map and side. Tiers and seasons play different metas, so they aren't mixed (a team that played two seasons is compared season by season), and using the median means one extreme team can't move it.

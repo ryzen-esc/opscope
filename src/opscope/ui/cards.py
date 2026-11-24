@@ -151,6 +151,21 @@ h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} 
 .ops-stat-s {{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:{TEXT_FAINT};}}
 @media (max-width: 640px) {{ .ops-stats {{grid-template-columns:repeat(2,minmax(0,1fr));}} }}
 
+/* ---- How it works ---- */
+.ops-pipe {{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px;margin:14px 0 8px;}}
+.ops-step {{position:relative;background:{PANEL};border:1px solid {BORDER};border-top:2px solid {ACCENT};padding:12px 14px;
+            animation:ops-in .3s ease-out;}}
+.ops-step:not(:last-child)::after {{content:"›";position:absolute;right:-17px;top:38%;color:{ACCENT};font-size:1.6rem;}}
+.ops-step-n {{color:{ACCENT};font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;}}
+.ops-step-v {{font-family:'JetBrains Mono',monospace;font-size:clamp(1.05rem,1.8vw,1.5rem);color:#fff;margin:6px 0 4px;}}
+.ops-step-d {{color:#aebccb;font-size:.8rem;line-height:1.4;}}
+@media (max-width: 900px) {{ .ops-pipe {{grid-template-columns:repeat(2,minmax(0,1fr));}}
+                             .ops-step::after {{display:none;}} }}
+.ops-anatomy .ops-ev {{height:22px;}} .ops-anatomy .ops-ev-range {{top:5px;height:12px;}}
+.ops-anatomy .ops-ev-dot {{height:22px;width:4px;}} .ops-anatomy .ops-ev-peer {{height:28px;}}
+.ops-anat-row {{position:relative;font-family:'JetBrains Mono',monospace;font-size:.75rem;}}
+.ops-anat-lbl {{position:absolute;white-space:nowrap;transform:translateX(-6px);}}
+
 /* ---- headline finding and game plan ---- */
 .ops-hero {{background:{PANEL};border:1px solid {BORDER};padding:16px 20px;margin-bottom:6px;animation:ops-in .35s ease-out;}}
 .ops-hero-text {{font-size:1.15rem;color:#fff;line-height:1.4;margin:6px 0 10px;}}
@@ -258,6 +273,37 @@ def page_header(kicker: str, title: str, context: str) -> None:
         f'<div class="ops-kicker">{kicker}</div>'
         f'<div class="ops-team" style="font-size:clamp(1.5rem,3vw,2.1rem);margin-bottom:4px">{escape(title)}</div>'
         f'<div class="ops-stat-s" style="font-size:.8rem;color:{TEXT_DIM}">{context}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def pipeline(steps: list[tuple[str, str, str]]) -> None:
+    """Numbered steps left to right (title, big value, description), with arrows between them."""
+    cells = "".join(
+        f'<div class="ops-step"><div class="ops-step-n">{i:02d} · {escape(title)}</div>'
+        f'<div class="ops-step-v">{value}</div><div class="ops-step-d">{desc}</div></div>'
+        for i, (title, value, desc) in enumerate(steps, 1))
+    st.markdown(f'<div class="ops-pipe">{cells}</div>', unsafe_allow_html=True)
+
+
+def evidence_anatomy(k: int, n: int, peer_rate: float, caption: str) -> None:
+    """A large evidence bar with each part labelled: the rate, the 95% range and the comparison tick."""
+    p, (lo, hi) = pct(k, n), wilson(k, n)
+    st.markdown(
+        f'<div class="ops-hero ops-cut ops-anatomy">'
+        f'<div class="ops-hero-text" style="font-size:1rem">{caption}</div>'
+        f'<div class="ops-anat-row" style="height:22px">'
+        f'<span class="ops-anat-lbl" style="left:calc({p:.4f} * 100%);color:{ACCENT}">▼ what they did: {p:.0%} '
+        f'({k} of {n})</span></div>'
+        f'{evidence_bar(k, n, peer_rate, ACCENT)}'
+        f'<div class="ops-anat-row" style="height:40px">'
+        f'<span class="ops-anat-lbl" style="left:calc({peer_rate:.4f} * 100%);color:{TEXT_DIM}">▲ typical team: '
+        f'{peer_rate:.0%}</span>'
+        f'<span class="ops-anat-lbl" style="left:calc({lo:.4f} * 100%);top:18px;color:{TEXT}">└ 95% range: '
+        f'{lo:.0%}–{hi:.0%} ┘ where their true rate plausibly is</span></div>'
+        f'<div class="ops-ctx" style="margin-top:6px">It counts as a tendency because the whole range sits clear of the '
+        f'typical team, with at least {MIN_SAMPLE} rounds behind it. If the grey tick fell inside the range, it '
+        f'would not be listed.</div></div>',
         unsafe_allow_html=True,
     )
 
