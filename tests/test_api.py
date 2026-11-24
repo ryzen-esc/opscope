@@ -138,3 +138,9 @@ def test_operator_counts_distinct_gun_rounds(real):
     for row in op["by_map"]:
         assert op["maps"][row["map"]]["gun_rounds"] == row["k"], row["map"]
     assert op["kept"]["n"] == op["rate"]["k"] and op["kept"]["k"] <= op["kept"]["n"]
+
+
+def test_zero_gun_sentence_uses_the_right_article(real):
+    op = real.get("/api/operator?team=79&weapon=operator&side=attacker&opponents=1079").json()
+    assert op["rate"]["k"] == 0
+    assert "never had an Operator" in op["glance"][0]

@@ -338,7 +338,8 @@ def operator(scope: Scope) -> dict:
             glance.append(f"The {gun} changed hands mid-round in <b>{n_pick}</b> rounds (fired by a player who "
                           f"didn't buy it: {', '.join(r.pickups['player_name'].value_counts().index[:3])}).")
     else:
-        glance.append(f"{team_name(scope.team_id)} never had a {gun} at the end of the buy phase in these "
+        art = "an" if gun[:1].lower() in "aeiou" else "a"
+        glance.append(f"{team_name(scope.team_id)} never had {art} {gun} at the end of the buy phase in these "
                       f"{r.n_rounds} rounds.")
     peer = (f"typical {r.league_label} team" if r.league_method == "typical team" else f"all other {r.league_label}")
     lo, hi = wilson(r.n_gun_rounds, r.n_rounds)
