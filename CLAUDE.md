@@ -7,7 +7,7 @@ Public repo: **https://github.com/ryzen-esc/opscope**.
 
 ## Where things stand (checkpoint: Nov 23, 2026, ~midnight)
 - **Redesign in progress: a new web app replaces the Streamlit UI.** Analytics and numbers are unchanged. 56 tests pass
-  (`uv run pytest`). **23 commits are local only** (`main` ahead of `origin/main`); ask Eli before pushing.
+  (`uv run pytest`). Everything up to the Nov 23 checkpoint is pushed to GitHub; ask Eli before pushing anything new.
 - **Plan** (approved by Eli; full text in `/Users/eli/.claude/plans/a-look-good-as-expressive-riddle-of-d17ce326-734c-4f59-8f9c-47ddc1d32f21.md`):
   1. ✅ Accurate maps (official minimap frame + traced minimaps). 2. ✅ JSON API + local server. 3. ✅ Overview story.
   4. ✅ Dashboard + Briefing tab. 5. ✅ Operator tab + round clock. 6. ✅ Utility tab.
