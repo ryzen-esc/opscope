@@ -36,7 +36,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
   // URL values are checked on read: a hand-edited or stale link falls back instead of breaking the tab.
   const st = { weapon: oneOf(params.get("weapon"), WEAPONS, "operator"), side: oneOf(params.get("side"), SIDES, "defender"),
     map: params.get("map") || "" };
-  let data = null, map = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map();
+  let data = null, map = null, tl = null, layer = null, token = 0, mapToken = 0, alive = true, order = [], rank = new Map();
   ui.setSide(st.side);
 
   async function load() {
@@ -125,9 +125,10 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
 
   // ---- the map, driven by the timeline ----
   async function showMap() {
-    const t = token;
-    const geo = await api.map(st.map);
-    if (t !== token || !alive) return;
+    // token: a newer load() wins; mapToken: a newer map switch wins (a slow geometry fetch must not draw over it).
+    const t = token, mt = ++mapToken, name = st.map;
+    const geo = await api.map(name);
+    if (t !== token || mt !== mapToken || name !== st.map || !alive) return;
     const m = data.maps[st.map] || { positions: [], kills: [], gun_rounds: 0, rounds: 0 };
     tip.hide(); // the dot under the pointer is about to go
     map = drawMap(ui.svg, geo, { floor: "#0f1924" });

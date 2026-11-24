@@ -33,7 +33,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
   };
   // Thrown utility only shows where it was aimed (GRID doesn't record landings), so aim lines start on for it.
   const aimOn = () => (st.aim != null ? st.aim : !["trap", "all"].includes(st.cls));
-  let data = null, map = null, geo = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map(), colors = {}, abilAll = [];
+  let data = null, map = null, geo = null, tl = null, layer = null, token = 0, mapToken = 0, alive = true, order = [], rank = new Map(), colors = {}, abilAll = [];
   ui.setSide(st.side);
   const live = new AbortController();
 
@@ -161,9 +161,11 @@ export function renderUtility(ui, { team, filters, params, setParams, tip, filte
 
   // ---- map ----
   async function showMap() {
-    const t = token;
-    geo = await api.map(st.map);
-    if (t !== token || !alive) return;
+    // token: a newer load() wins; mapToken: a newer map switch wins (a slow geometry fetch must not draw over it).
+    const t = token, mt = ++mapToken, name = st.map;
+    const g = await api.map(name);
+    if (t !== token || mt !== mapToken || name !== st.map || !alive) return;
+    geo = g; // only now: drawLayers() reads geo for the habit ring size
     const mm = m();
     abilAll = Object.entries(countBy(mm.casts, (c) => c.ability)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
     colors = Object.fromEntries(abilAll.map((a, i) => [a, i < PALETTE.length ? PALETTE[i] : OTHER]));
