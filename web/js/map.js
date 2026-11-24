@@ -119,8 +119,14 @@ export function drawMap(svg, geo, opts = {}) {
     return g;
   }
 
-  /** Brighten one plant-site zone (e.g. "A site"). */
+  /** Brighten one plant-site zone (e.g. "A site") and dim any lit before; null only dims. */
   function highlightSite(name, color = COLORS.amb) {
+    for (const p of Object.values(areas).flat()) {
+      p.getAnimations().forEach((a) => a.cancel());
+      p.setAttribute("fill", "rgba(245,180,60,.09)");
+      p.removeAttribute("fill-opacity");
+    }
+    if (name == null) return;
     for (const p of areas[name] || []) {
       p.setAttribute("fill", color);
       p.setAttribute("fill-opacity", ".28");

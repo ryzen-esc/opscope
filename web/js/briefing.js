@@ -171,7 +171,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     setParams({ sel: i == null ? null : i });
     listEl.querySelectorAll(".item").forEach((li) => li.classList.toggle("on", +li.dataset.i === i));
     ui.stage.classList.toggle("carded", i != null);
-    if (i == null) { ui.note.classList.remove("on"); ui.card.classList.remove("in"); map?.layers.top.replaceChildren(); map?.focus(null, 1, 700); return; }
+    if (i == null) { ui.note.classList.remove("on"); ui.card.classList.remove("in"); map?.layers.top.replaceChildren(); map?.highlightSite(null); map?.focus(null, 1, 700); return; }
     const { ev, advice } = items[i];
     const li = listEl.querySelector(`[data-i="${i}"]`);
     li?.scrollIntoView({ block: "nearest", behavior: fromKey ? "auto" : "smooth" });
@@ -180,6 +180,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     if (!m || st.sel !== i) return;
     drawLayers();
     m.layers.top.replaceChildren();
+    m.highlightSite(null);
     const color = ev.side === "attacker" ? COLORS.atk : COLORS.def;
     const at = findingAt(m.geo, ev);
     setTimeout(() => {

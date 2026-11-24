@@ -176,6 +176,7 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
         stage.map.drawIn(1200);
       } else {
         stage.map.layers.top.innerHTML = "";
+        stage.map.highlightSite(null);
         stage.map.focus(null, 1, 600);
       }
       const at = findingAt(geo, ev);
