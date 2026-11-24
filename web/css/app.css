@@ -431,3 +431,9 @@ body.board .progress { display: none }
 .legend .lg-ab { background: none; border: 0; color: var(--dim); font: 11px var(--mono); display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 0 }
 .legend .lg-ab:hover { color: #fff } .legend .lg-ab.off { opacity: .35; text-decoration: line-through } .legend .lg-ab small { color: var(--faint) }
 .hring { cursor: pointer } .hring.on circle { stroke: var(--amb); stroke-width: 2.2 }
+.pchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
+.pchips button { background: none; border: 1px solid var(--line2); color: var(--dim); font: 500 12px var(--body); padding: 4px 10px; border-radius: 999px; cursor: pointer }
+.pchips button small { color: var(--faint); font-size: 10.5px } .pchips button:hover { color: #fff }
+.pchips button.on { background: var(--def); border-color: var(--def); color: #001018 } .pchips button.on small { color: rgba(0, 16, 24, .65) }
+.who .pl { background: none; border: 0; color: #fff; font: inherit; cursor: pointer; padding: 0; text-decoration: underline dotted rgba(255,255,255,.3) }
+.who .pl:hover { color: var(--def) }

@@ -27,11 +27,12 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     map: params.get("map") || "", view: params.get("uview") === "land" ? "land" : "cast",
     aim: params.has("aim") ? params.get("aim") === "1" : null, // null = the default for this utility type
     spots: params.get("spots") !== "0", hidden: new Set(), round: null, focusHabit: null,
+    players: new Set(params.getAll("player")), // empty = the whole team
   };
   if (st.side === "both" && !params.get("side")) st.side = "defender";
   // Thrown utility only shows where it was aimed (GRID doesn't record landings), so aim lines start on for it.
   const aimOn = () => (st.aim != null ? st.aim : !["trap", "all"].includes(st.cls));
-  let data = null, map = null, geo = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map(), colors = {};
+  let data = null, map = null, geo = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map(), colors = {}, abilAll = [];
   ui.setSide(st.side);
   const live = new AbortController();
 
@@ -65,11 +66,30 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
   }
 
   const m = () => data.maps[st.map];
-  const visibleCasts = () => m().casts.filter((c) => !st.hidden.has(c.ability));
+  const mine = (x) => !st.players.size || st.players.has(x.player);
+  const visibleCasts = () => m().casts.filter((c) => mine(c) && !st.hidden.has(c.ability));
   const habitsNow = () => {
     const list = st.view === "land" ? m().habits_landing : m().habits;
-    return list.filter((h) => h.strong && !st.hidden.has(h.ability)).slice(0, 5);
+    return list.filter((h) => h.strong && mine(h) && !st.hidden.has(h.ability)).slice(0, 5);
   };
+  /** Players with casts on this map, busiest first, with the agents they cast from. */
+  const playersHere = () => {
+    const by = new Map();
+    for (const c of m().casts) {
+      const p = by.get(c.player) || { player: c.player, agents: new Set(), n: 0 };
+      p.agents.add(c.agent); p.n++; by.set(c.player, p);
+    }
+    return [...by.values()].sort((a, b) => b.n - a.n);
+  };
+  function togglePlayer(name) {
+    if (name == null) st.players.clear();
+    else if (st.players.has(name)) st.players.delete(name);
+    else st.players.add(name);
+    setParams({ player: [...st.players] });
+    st.focusHabit = null;
+    renderRail(); renderLegend(); renderHud(); drawLayers();
+    if (st.round != null && !order.includes(st.round)) watchRound(null); else renderNav();
+  }
 
   // ---- rail ----
   function renderRail() {
@@ -84,20 +104,24 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     const hab = habitsNow();
     const modeled = mm.casts.some((c) => c.land);
     const unit = data.unit;
-    const who = mm.who.filter((w) => !st.hidden.has(w.ability));
+    const who = mm.who.filter((w) => mine(w) && !st.hidden.has(w.ability));
+    const plist = playersHere();
     ui.rail.innerHTML = `
       <div class="op-head"><div id="ucls"></div><div id="uphase" style="margin-top:8px"></div>
         ${modeled ? `<div id="uview" style="margin-top:8px"></div>` : ""}
         <div class="toggles"><label><input type="checkbox" id="taim" ${aimOn() ? "checked" : ""}> Aim direction</label>
-          <label><input type="checkbox" id="tspots" ${st.spots ? "checked" : ""}> Habit spots</label></div></div>
+          <label><input type="checkbox" id="tspots" ${st.spots ? "checked" : ""}> Habit spots</label></div>
+        <div class="pchips" role="group" aria-label="Players"><button type="button" data-p="" class="${st.players.size ? "" : "on"}">Whole team</button>${
+          plist.map((p) => `<button type="button" data-p="${esc(p.player)}" class="${st.players.has(p.player) ? "on" : ""}"
+            title="${p.n} casts on ${esc([...p.agents].map(title).join(", "))}">${esc(p.player)} <small>${esc([...p.agents].map(title).join(", "))}</small></button>`).join("")}</div></div>
       <section class="blk">
-        <div class="k">${esc(title(CLASS_LONG[st.cls]))} · ${esc(title(st.map))} · ${esc(unit)} · ${esc(data.name)}</div>
+        <div class="k">${esc(title(CLASS_LONG[st.cls]))} · ${esc(title(st.map))} · ${esc(unit)} · ${st.players.size ? esc([...st.players].join(", ")) : esc(data.name)}</div>
         <h4 style="margin-top:12px">Habits <span>same spot within 4 m, in 40%+ of rounds on the agent</span></h4>
         ${hab.length ? `<ol class="habits">${hab.map((h, i) => `<li data-h="${i}" class="${st.focusHabit === i ? "on" : ""}">
           <span class="hmk">${MARKS[i]}</span><span><b>${esc(h.player)}</b> (${esc(title(h.agent))}) puts <b>${esc(h.ability_name)}</b> in the same spot${
             h.area ? ` near <b>${esc(h.area)}</b>` : ""} in <b>${h.k} of ${h.n}</b> ${esc(unit)} on ${esc(title(h.agent))}.</span></li>`).join("")}</ol>`
           : `<p class="glance">No placement on ${esc(title(st.map))} repeats in at least 40% of rounds (with ${MIN_SAMPLE}+ rounds on the agent).
-             This team varies its ${esc(CLASS_LONG[st.cls])} here.</p>`}
+             ${st.players.size ? "They vary" : "This team varies"} ${st.players.size ? "their" : "its"} ${esc(CLASS_LONG[st.cls])} here.</p>`}
         <p class="hint">A habit is the player's own repeat rate. The scouting report also compares it with the typical player, and flags it
           only when it's clearly more predictable.</p>
       </section>
@@ -114,9 +138,9 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
       <section class="blk">
         <h4>Who uses what</h4>
         <table class="who"><thead><tr><th>Player</th><th>Ability</th><th>Casts</th><th>Used in</th><th>/rd</th></tr></thead>
-          <tbody>${who.map((w) => `<tr><td>${esc(w.player)} <small>${esc(title(w.agent))}</small></td><td><i style="--c:${colors[w.ability] || "#888"}"></i>${esc(w.ability_name)}</td>
+          <tbody>${who.map((w) => `<tr><td><button type="button" class="pl" data-p="${esc(w.player)}" title="Show only ${esc(w.player)}">${esc(w.player)}</button> <small>${esc(title(w.agent))}</small></td><td><i style="--c:${colors[w.ability] || "#888"}"></i>${esc(w.ability_name)}</td>
             <td>${w.casts}</td><td>${w.rounds} of ${w.on_agent}</td><td>${w.per_round}</td></tr>`).join("") || `<tr><td colspan="5">No casts.</td></tr>`}</tbody></table>
-        <p class="hint">"Used in" counts rounds the player was on that agent.</p>
+        <p class="hint">"Used in" counts rounds the player was on that agent. Click a name to show only that player.</p>
       </section>
       ${st.view === "land" ? `<section class="blk"><p class="hint" style="margin:0">Landing spots are estimates for damaging utility (mollies, nanoswarms,
         shock darts…): placed along the aim at the distance that ability usually travels for that angle. On held-out matches the typical miss is
@@ -128,6 +152,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     ui.rail.querySelector("#taim").addEventListener("change", (e) => { st.aim = e.target.checked; setParams({ aim: st.aim ? 1 : null }); drawLayers(); });
     ui.rail.querySelector("#tspots").addEventListener("change", (e) => { st.spots = e.target.checked; setParams({ spots: st.spots ? null : 0 }); drawLayers(); });
     ui.rail.querySelectorAll(".habits li").forEach((li) => li.addEventListener("click", () => focusHabit(+li.dataset.h)));
+    ui.rail.querySelectorAll(".pchips button, .who .pl").forEach((b) => b.addEventListener("click", () => togglePlayer(b.dataset.p || null)));
   }
 
   function countBy(xs, f) { const o = {}; for (const x of xs) o[f(x)] = (o[f(x)] || 0) + 1; return o; }
@@ -138,22 +163,19 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     geo = await api.map(st.map);
     if (t !== token || !alive) return;
     const mm = m();
-    const abil = Object.entries(countBy(mm.casts, (c) => c.ability)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
-    colors = Object.fromEntries(abil.map((a, i) => [a, i < PALETTE.length ? PALETTE[i] : OTHER]));
-    for (const a of [...st.hidden]) if (!abil.includes(a)) st.hidden.delete(a);
-    order = [...new Set(mm.casts.map((c) => c.round))].sort((a, b) => {
-      const ra = data.rounds[a], rb = data.rounds[b];
-      return (ra.date || "").localeCompare(rb.date || "") || ra.game.localeCompare(rb.game) || ra.round_num - rb.round_num;
-    });
-    rank = new Map(order.map((r, i) => [r, i + 1]));
+    abilAll = Object.entries(countBy(mm.casts, (c) => c.ability)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+    colors = Object.fromEntries(abilAll.map((a, i) => [a, i < PALETTE.length ? PALETTE[i] : OTHER]));
+    for (const a of [...st.hidden]) if (!abilAll.includes(a)) st.hidden.delete(a);
+    const here = new Set(mm.casts.map((c) => c.player));
+    for (const p of [...st.players]) if (!here.has(p)) st.players.delete(p); // a player who didn't play this map
+    setParams({ player: [...st.players] });
     st.round = null; st.focusHabit = null;
     tip.hide();
     map = drawMap(ui.svg, geo, { floor: "#0f1924" });
     map.drawIn(900);
     renderRail();
-    const side = data.side === "attacker" ? "attack" : data.side === "defender" ? "defense" : "both sides";
-    ui.hud.innerHTML = `<b>${esc(title(st.map))}</b><span>${esc(CLASS_LONG[st.cls])} · ${esc(side)} · ${mm.casts.length} casts in ${mm.rounds_with_casts} of ${mm.rounds} rounds</span>`;
-    renderLegend(abil);
+    renderHud();
+    renderLegend();
     drawLayers();
     ui.live.innerHTML = `<div class="rnav" id="rnav"></div><div class="lbody" id="lbody"></div>`;
     renderNav();
@@ -168,8 +190,16 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
     if (mm.casts.length) setTimeout(() => alive && tl?.play(), 900);
   }
 
-  function renderLegend(abil) {
-    const counts = countBy(m().casts, (c) => c.ability);
+  function renderHud() {
+    const mm = m(), casts = mm.casts.filter(mine);
+    const side = data.side === "attacker" ? "attack" : data.side === "defender" ? "defense" : "both sides";
+    ui.hud.innerHTML = `<b>${esc(title(st.map))}</b><span>${esc(CLASS_LONG[st.cls])} · ${esc(side)}${st.players.size ? ` · ${esc([...st.players].join(", "))}` : ""} ·
+      ${casts.length} casts in ${new Set(casts.map((c) => c.round)).size} of ${mm.rounds} rounds</span>`;
+  }
+
+  function renderLegend() {
+    const abil = abilAll.filter((a) => m().casts.some((c) => c.ability === a && mine(c)));
+    const counts = countBy(m().casts.filter(mine), (c) => c.ability);
     const top = abil.slice(0, PALETTE.length), rest = abil.slice(PALETTE.length);
     const name = (a) => m().casts.find((c) => c.ability === a).ability_name;
     const restOff = rest.length && rest.every((a) => st.hidden.has(a));
@@ -192,6 +222,12 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
   function drawLayers() {
     if (!map) return;
     map.layers.data.replaceChildren(); map.layers.under.replaceChildren(); map.layers.top.replaceChildren();
+    // The rounds behind what's shown, oldest first: "Round 3 of 6" means the third of those.
+    order = [...new Set(visibleCasts().map((c) => c.round))].sort((a, b) => {
+      const ra = data.rounds[a], rb = data.rounds[b];
+      return (ra.date || "").localeCompare(rb.date || "") || ra.game.localeCompare(rb.game) || ra.round_num - rb.round_num;
+    });
+    rank = new Map(order.map((r, i) => [r, i + 1]));
     layer = { dots: [], path: el("polyline", { fill: "none", stroke: "#fff", "stroke-opacity": .55, "stroke-width": 1.3, "stroke-dasharray": "4 4",
       "vector-effect": "non-scaling-stroke", points: "" }, map.layers.under) };
     for (const c of visibleCasts()) {
@@ -330,7 +366,7 @@ export function renderUtility(ui, { team, filters, params, setParams, tip }) {
   }
 
   function story(i, t) {
-    const ev = m().casts.filter((c) => c.round === i && !st.hidden.has(c.ability)).sort((a, b) => a.t - b.t);
+    const ev = m().casts.filter((c) => c.round === i && mine(c) && !st.hidden.has(c.ability)).sort((a, b) => a.t - b.t);
     return `<div class="k">Utility in this round</div><ol class="rstory">${ev.map((c) => `
       <li class="${clampT(c.t) <= t ? "past" : ""}${clampT(c.t) <= t && t - clampT(c.t) < 2 ? " now" : ""}"><span class="st">${clockLabel(c.t)}</span>
         <span><b>${esc(c.player)}</b> · ${esc(c.ability_name)}${c.area ? ` · ${esc(c.area)}` : ""}</span></li>`).join("")}</ol>
