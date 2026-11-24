@@ -18,6 +18,7 @@ import numpy as np
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
@@ -188,11 +189,21 @@ class NoStaleAssets:
         await self.app(scope, receive, send_with_header)
 
 
+# The server binds to 127.0.0.1, but that alone does not stop DNS rebinding: a web page whose hostname is rebound to
+# 127.0.0.1 would be same-origin with the API and could read the GRID-derived data. Answer only our own host names
+# (the port in the Host header is ignored, so any --port works).
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+
 def create_app(static_dir=None) -> Starlette:
-    """The API, plus the web front end from `static_dir` when given."""
+    """The API, plus the web front end from `static_dir` when given. Requests for any other Host get a 400."""
     all_routes = list(routes)
     if static_dir is not None:
         from starlette.routing import Mount
         from starlette.staticfiles import StaticFiles
         all_routes.append(Mount("/", StaticFiles(directory=static_dir, html=True), name="web"))
-    return Starlette(routes=all_routes, middleware=[Middleware(GZipMiddleware, minimum_size=2000), Middleware(NoStaleAssets)])
+    return Starlette(routes=all_routes, middleware=[
+        Middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS, www_redirect=False),
+        Middleware(GZipMiddleware, minimum_size=2000),
+        Middleware(NoStaleAssets),
+    ])

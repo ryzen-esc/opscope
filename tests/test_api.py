@@ -5,9 +5,12 @@ from starlette.testclient import TestClient
 from opscope.api import _clean, create_app
 
 
+BASE = "http://127.0.0.1"  # the app only answers its own host names (TestClient's default is "testserver")
+
+
 @pytest.fixture
 def client():
-    return TestClient(create_app())
+    return TestClient(create_app(), base_url=BASE)
 
 
 def test_missing_cache_returns_setup_steps(tmp_path, monkeypatch, client):
@@ -33,9 +36,23 @@ def test_clean_makes_numpy_and_nan_json_safe():
 
 def test_static_front_end_is_served(tmp_path):
     (tmp_path / "index.html").write_text("<p>hi</p>")
-    r = TestClient(create_app(tmp_path)).get("/")
+    r = TestClient(create_app(tmp_path), base_url=BASE).get("/")
     assert r.status_code == 200 and "hi" in r.text
     assert r.headers["cache-control"] == "no-cache"  # browsers recheck the app's files, so updates show up
+
+
+def test_foreign_host_is_refused(tmp_path):
+    """DNS rebinding: a page whose hostname points at 127.0.0.1 must not be able to read the API or the front end."""
+    (tmp_path / "index.html").write_text("<p>hi</p>")
+    app = create_app(tmp_path)
+    for base in ("http://127.0.0.1:8000", "http://localhost:8123", "http://127.0.0.1"):
+        assert TestClient(app, base_url=base).get("/").status_code == 200
+    bad = TestClient(app, base_url="http://attacker.example:8000")
+    for path in ("/api/meta", "/api/report?team=79", "/api/operator?team=79&maps=haven", "/", "/index.html"):
+        r = bad.get(path)
+        assert r.status_code == 400, path
+        assert "hi" not in r.text and "teams" not in r.text
+    assert TestClient(app).get("/api/meta").status_code == 400  # TestClient's default "testserver" host too
 
 
 # ---- against the real local cache (skipped where it hasn't been built) --------------------------------
