@@ -105,8 +105,8 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
       </section>
       <section class="blk">
         <h4>Survived with it</h4><p class="wr">${wr(d.kept.k, d.kept.n)} <span>${esc(d.gun)} rounds (it carries into the next round)</span></p>
-        ${d.aggression ? `<h4 style="margin-top:14px">Early setup (first 30 s)</h4><p class="glance">Median position further forward than
-          <b>${pct(d.aggression.percentile)}</b> of other teams' ${esc(d.gun)} setups on this map (seen in ${d.aggression.n} rounds).</p>` : ""}
+        ${m.aggression ? `<h4 style="margin-top:14px">Early setup on ${esc(title(st.map))} (first 30 s)</h4><p class="glance">Median position further forward than
+          <b>${pct(m.aggression.percentile)}</b> of other teams' ${esc(d.gun)} setups on this map (${m.aggression.n} early setups seen).</p>` : ""}
       </section>`;
     weaponSeg();
     const bar = evidenceBar({ ...r, k: r.k, n: r.n }, { side: d.side === "attacker" ? "attacker" : "defender", baseLabel: "typical" });

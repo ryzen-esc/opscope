@@ -284,6 +284,15 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
     return grouped
 
 
+def _map_aggression(scope: Scope, map_name: str, holder_rounds: int) -> dict | None:
+    """Early setup on one map: the holder's median first position in the first 30 s against other teams' setups
+    on that map (the report's aggression summary for the map scope), or None below MIN_SAMPLE setups."""
+    if holder_rounds < MIN_SAMPLE:  # at most one setup per holder-round: skip the league pass when it can't qualify
+        return None
+    a = operator_report(replace(scope, maps=(map_name,))).aggression_summary()
+    return a if a.get("median") is not None and a["n"] >= MIN_SAMPLE else None
+
+
 @lru_cache(maxsize=32)
 def operator(scope: Scope) -> dict:
     r = operator_report(scope)
@@ -309,6 +318,7 @@ def operator(scope: Scope) -> dict:
             # Distinct rounds (two holders in one round count once), the same count as by_map and the map chips.
             "gun_rounds": int(maps.loc[maps["map"] == m, "gun_rounds"].iloc[0]),
             "rounds": int(maps.loc[maps["map"] == m, "rounds"].iloc[0]),
+            "aggression": _map_aggression(scope, m, int(r.holders["map"].eq(m).sum())),
             # One entry per recorded moment of the holder: via = what GRID logged (shot = dealt damage, hit = took
             # damage, cast = used an ability), what = those events in words.
             "positions": [{"at": [float(a), float(b)], "t": _r(t), "round": ri, "player": p, "agent": ag,
@@ -356,7 +366,6 @@ def operator(scope: Scope) -> dict:
     kept, kept_n = int(kept_by_round.sum()), len(kept_by_round)
     w = r.win_rates("full")
     fb = r.first_shot_buckets()
-    aggr = r.aggression_summary() if scope.maps else None
     return {
         "team": scope.team_id, "name": team_name(scope.team_id), "weapon": scope.weapon, "gun": gun,
         "side": scope.side, "unit": unit, "empty": False,
@@ -371,7 +380,6 @@ def operator(scope: Scope) -> dict:
                                               holders["won"], holders["kept"])],
         "by_map": [{"map": m, "k": int(k), "n": int(n)} for m, k, n in zip(maps["map"], maps["gun_rounds"], maps["rounds"])],
         "glance": glance,
-        "aggression": aggr if aggr and aggr.get("median") is not None and aggr["n"] >= MIN_SAMPLE else None,
         "rounds": _round_info(r, rounds_index),
         "maps": per_map,
     }

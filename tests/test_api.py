@@ -166,3 +166,13 @@ def test_one_dot_per_moment(real):
     for name, m in op["maps"].items():
         keys = [(p["round"], p["t"], p["player"]) for p in m["positions"]]
         assert len(keys) == len(set(keys)), name
+
+
+def test_early_setup_is_sent_per_map(real):
+    # The web app never sends `maps` (the map is a view control), so the early-setup summary has to come per map.
+    from opscope.analytics.operator import Scope, operator_report
+    op = real.get("/api/operator?team=79&weapon=operator&side=defender").json()
+    a = op["maps"]["haven"]["aggression"]
+    want = operator_report(Scope(team_id="79", weapon="operator", side="defender", maps=("haven",))).aggression_summary()
+    assert a["n"] == want["n"] >= 8 and abs(a["percentile"] - want["percentile"]) < 1e-9
+    assert all(m["aggression"] is None for m in op["maps"].values() if m["gun_rounds"] < 8)
