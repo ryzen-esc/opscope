@@ -1,0 +1,68 @@
+# Minimap transform per map, from the community API at valorant-api.com (/v1/maps): public metadata,
+# no map art. u = y * x_mult + x_add (right), v = x * y_mult + y_add (down), both 0..1.
+# Regenerate: uv run python -m opscope.zones --callouts
+abyss:
+  x_add: 0.5
+  x_mult: 8.1e-05
+  y_add: 0.5
+  y_mult: -8.1e-05
+ascent:
+  x_add: 0.813895
+  x_mult: 7.0e-05
+  y_add: 0.573242
+  y_mult: -7.0e-05
+bind:
+  x_add: 0.576941
+  x_mult: 5.9e-05
+  y_add: 0.967566
+  y_mult: -5.9e-05
+breeze:
+  x_add: 0.465123
+  x_mult: 7.0e-05
+  y_add: 0.833078
+  y_mult: -7.0e-05
+corrode:
+  x_add: 0.526158
+  x_mult: 7.0e-05
+  y_add: 0.5
+  y_mult: -7.0e-05
+fracture:
+  x_add: 0.556952
+  x_mult: 7.8e-05
+  y_add: 1.155886
+  y_mult: -7.8e-05
+haven:
+  x_add: 1.09345
+  x_mult: 7.5e-05
+  y_add: 0.642728
+  y_mult: -7.5e-05
+icebox:
+  x_add: 0.460214
+  x_mult: 7.2e-05
+  y_add: 0.304687
+  y_mult: -7.2e-05
+lotus:
+  x_add: 0.454789
+  x_mult: 7.2e-05
+  y_add: 0.917752
+  y_mult: -7.2e-05
+pearl:
+  x_add: 0.480469
+  x_mult: 7.8e-05
+  y_add: 0.916016
+  y_mult: -7.8e-05
+split:
+  x_add: 0.842188
+  x_mult: 7.8e-05
+  y_add: 0.697578
+  y_mult: -7.8e-05
+summit:
+  x_add: 0.047401
+  x_mult: 7.5e-05
+  y_add: 0.978891
+  y_mult: -7.5e-05
+sunset:
+  x_add: 0.5
+  x_mult: 7.8e-05
+  y_add: 0.515625
+  y_mult: -7.8e-05

@@ -53,7 +53,7 @@ src/opscope/
                replays GRID's rollback events so every map matches its official score
   analytics/   operator · utility · insights (typical-team comparison + ranking) · antistrat · landing
   zones.py     bomb sites from 29k plant positions; area names from map callouts
-  ui/          data-drawn minimap (no Riot art), cards, shared filters
+  ui/          minimap layers, cards, shared filters
 views/         Streamlit pages
 tests/         pytest, synthetic fixtures only
 ```
@@ -70,7 +70,7 @@ The full method, validation numbers and limits are in **[METHODOLOGY.md](METHODO
 
 Uses official GRID esports data provided for the hackathon (© GRID eSports GmbH and Riot Games, Inc.; ability supplement © Cloud9 Esports, Inc.). The data is not included or redistributed.
 Map callout names and positions (`src/opscope/callouts.yaml`) come from the community API at [valorant-api.com](https://valorant-api.com), which uses the same coordinate system as GRID. Bomb-site centres (`src/opscope/sites.yaml`) are averaged from plant positions and contain no match data.
-Maps are drawn from recorded player positions; no Riot art is used. OpScope is not endorsed by Riot Games.
+Map outlines are traced from the official minimap images published through valorant-api.com. OpScope downloads them on first use into the local, gitignored cache; they are not included in or redistributed by this repository. Without network access it falls back to outlines drawn from recorded player positions. Map placement uses each map's public minimap transform (`src/opscope/minimaps.yaml`). VALORANT and its maps are © Riot Games, Inc.; OpScope is not endorsed by Riot Games.
 
 Built with Python, pandas, Plotly and Streamlit, using PyCharm, Junie, JetBrains AI Assistant and Claude Code.
 

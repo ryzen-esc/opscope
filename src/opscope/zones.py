@@ -119,12 +119,28 @@ def nearest_callout(map_name: str, x, y) -> np.ndarray:
     return out
 
 
-def fetch_callouts(url: str = CALLOUTS_URL) -> dict[str, list[dict]]:
-    """Download map callouts (only names + x/y are kept)."""
+def fetch_maps(url: str = CALLOUTS_URL) -> list[dict]:
+    """The raw /v1/maps list from valorant-api.com."""
     import json
     import urllib.request
     with urllib.request.urlopen(url, timeout=60) as resp:
-        data = json.load(resp)["data"]
+        return json.load(resp)["data"]
+
+
+def minimap_transforms(data: list[dict]) -> dict[str, dict]:
+    """Per map, the four numbers that place game x/y on the official minimap (u right, v down, both 0..1):
+    u = y * x_mult + x_add, v = x * y_mult + y_add. Public metadata only; no map art is used."""
+    out = {}
+    for m in data:
+        if m.get("xMultiplier") and m.get("callouts"):
+            out[m["displayName"].lower()] = {"x_mult": m["xMultiplier"], "y_mult": m["yMultiplier"],
+                                             "x_add": m["xScalarToAdd"], "y_add": m["yScalarToAdd"]}
+    return out
+
+
+def fetch_callouts(data: list[dict] | None = None) -> dict[str, list[dict]]:
+    """Map callouts from the /v1/maps list (only names + x/y are kept)."""
+    data = fetch_maps() if data is None else data
     out = {}
     for m in data:
         pts = [{"name": callout_name(c["superRegionName"], c["regionName"]),
@@ -158,10 +174,19 @@ def init_sites(min_plants: int = 20) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description="Bomb-site centres per map")
     ap.add_argument("--init", action="store_true", help="(re)compute site centres from the cache and write the YAML")
-    ap.add_argument("--callouts", action="store_true", help="download callouts from valorant-api.com into callouts.yaml")
+    ap.add_argument("--callouts", action="store_true",
+                    help="download callouts and minimap transforms from valorant-api.com into callouts.yaml / minimaps.yaml")
     args = ap.parse_args()
     if args.callouts:
-        data = fetch_callouts()
+        raw = fetch_maps()
+        from opscope.geometry import MINIMAPS_FILE
+        tf = minimap_transforms(raw)
+        MINIMAPS_FILE.write_text(
+            "# Minimap transform per map, from the community API at valorant-api.com (/v1/maps): public metadata,\n"
+            "# no map art. u = y * x_mult + x_add (right), v = x * y_mult + y_add (down), both 0..1.\n"
+            "# Regenerate: uv run python -m opscope.zones --callouts\n" + yaml.safe_dump(tf, sort_keys=True))
+        print(f"Wrote {MINIMAPS_FILE} ({len(tf)} maps)")
+        data = fetch_callouts(raw)
         header = ("# Map callouts (name + x/y in game units), from the community API at valorant-api.com (/v1/maps).\n"
                   "# Same coordinate system as GRID. Regenerate: uv run python -m opscope.zones --callouts\n")
         CALLOUTS_FILE.write_text(header + yaml.safe_dump(data, sort_keys=True))

@@ -45,10 +45,17 @@ Streamlit app (`app.py` → pages in `views/`, page tabs in the top bar, filters
 - **Signature:** the **evidence bar** on every finding: the team's rate, its Wilson 95% range (shaded) and a grey tick for
   the typical team. Category labels shown to users: Gun choice / Utility habit / Plant site (internal: Operator/Utility/Attack).
 - **Layout chosen by Eli:** "Briefing" (key insight first, details on demand), over tabbed / map board / ranked feed.
-- **No Riot art.** Eli asked for official agent icons and VALORANT backgrounds, then dropped the idea: the hackathon rules
-  bar third-party copyrighted material without permission and require compliance with Riot's developer policies, which
-  allow game assets only from Riot's own sources in products registered on the Developer Portal. Don't re-add them
-  without written permission. An original alternative (role-coloured hex badges, data-drawn map art) was mocked and declined.
+- **No Riot art, except traced minimaps.** Eli asked for official agent icons and VALORANT backgrounds, then dropped the
+  idea: the hackathon rules bar third-party copyrighted material without permission and require compliance with Riot's
+  developer policies, which allow game assets only from Riot's own sources in products registered on the Developer
+  Portal. Don't re-add icons, splash art or logos without written permission.
+  - **Minimaps (Eli's decision, Nov 23, after being told the risk):** map outlines are traced from the official minimap
+    images (valorant-api.com `displayIcon`). `geometry.py` downloads them on first use into `cache/v1/minimaps/`
+    (gitignored) and traces floor, walls, props and plant-site zones into vectors in `cache/v1/geometry/`. Never commit
+    the images or the traced vectors. Offline, it falls back to outlines drawn from precise match positions.
+- **Map frame:** GRID x/y map onto the official minimap with x and y swapped (`u = y·x_mult + x_add`,
+  `v = x·y_mult + y_add`, constants in `src/opscope/minimaps.yaml`). The old plots (x right, y up) were mirrored. Every
+  layer must go through `geometry.to_view()`, which also turns each map so attackers start at the bottom.
 - **Code:** `ui/theme.py` (palette, Plotly template `opscope`, `chart()` which must be used instead of `st.plotly_chart`
   because Streamlit's chart theme overrides the template, `count_axis()` for whole-number axes); `ui/brand.py` (icon,
   wordmark, splash); `ui/cards.py` (all CSS, `evidence_bar`, `brief_card`, `plan_rows`, `dossier_header`, `page_header`,
@@ -71,7 +78,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - Lives at `$STL_DATA_DIR` = `/Users/eli/hackathon/stl-hackathon-2026-grid-starter` (sparse: val, val-ability-supplements, meta), outside the repo. Read its `AGENTS.md`/README for the format.
 - **Never copy, commit or redistribute the data** (or decompressed copies, extracts, caches). Stream `.zst` with `compression.zstd`; never decompress to disk. No real data in tests or Junie prompts (tests use synthetic fixtures).
 - Before every commit/push: `git diff --cached --name-only | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb)$|cache/'` must print nothing. Never `git add` the cache.
-- Committed derived files are aggregate only: `src/opscope/sites.yaml` (site centres) and `src/opscope/callouts.yaml` (community callouts from valorant-api.com).
+- Committed derived files are aggregate only: `src/opscope/sites.yaml` (site centres), `src/opscope/callouts.yaml` (community callouts from valorant-api.com) and `src/opscope/minimaps.yaml` (public minimap transforms).
 - Track teams/players by **ID**, never by name. Times are UTC.
 
 ## How the code works (`src/opscope/`)
@@ -89,7 +96,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
   - `landing.py`: validated landing model. `roster.py`: rosters per event and departed flags. `stats.py`: Wilson, `typical_rate`.
 - **Comparison rule:** a team is compared with the **typical other team** (median of per-team rates, 16+ rounds, at least 4 teams, else pooled) in the **same tier and season**. Multi-season teams are compared season by season, weighted by rounds. The habit baseline = median same-spot share of **other teams'** players, following the Patch/Event filters.
 - `zones.py`: bomb sites (k-means on 28,952 plants) + `nearest_callout` (a site centre within 8 m wins, else the nearest callout within 25 m). valorant-api.com uses the **same x/y as GRID**.
-- `maps.py`: data-drawn backdrop (no Riot art), spawns, aggression. `ui/`: minimap layers, cards, sidebar filters.
+- `geometry.py`: the official minimap frame (`to_minimap`, `to_view`), traced minimap layers (`map_geometry`: floor rings, props, site zones, spawns, sites, callouts) with a data-drawn fallback. `maps.py`: old data-drawn backdrop (Streamlit), spawns, aggression. `ui/`: minimap layers, cards, sidebar filters.
 - **Positions only exist at events** (shots, hits, casts, plants), ±1–4 m. Always state coverage ("seen in k of n rounds").
 
 ## Gotchas
