@@ -184,6 +184,25 @@ def test_early_setup_is_sent_per_map(real):
     assert all(m["aggression"] is None for m in op["maps"].values() if m["gun_rounds"] < 8)
 
 
+def test_early_setup_reads_forward_on_both_sides(real):
+    # Aggression runs 0 (defender spawn) to 1 (attacker spawn): forward is higher on defense, lower on attack.
+    # "Further forward than X% of other teams' setups" must follow that, and both sides together mean nothing.
+    seen = 0
+    for team, weapon in (("79", "operator"), ("97", "operator"), ("55258", "outlaw")):
+        for side in ("attacker", "defender"):
+            op = real.get(f"/api/operator?team={team}&weapon={weapon}&side={side}").json()
+            for m in op.get("maps", {}).values():
+                a = m["aggression"]
+                if not a or a["median"] == a["league_median"]:
+                    continue
+                forward = a["median"] < a["league_median"] if side == "attacker" else a["median"] > a["league_median"]
+                assert (a["percentile"] >= 0.5) == forward, (team, side, a)
+                seen += side == "attacker"
+        both = real.get(f"/api/operator?team={team}&weapon={weapon}&side=both").json()
+        assert all(m["aggression"] is None for m in both.get("maps", {}).values())
+    assert seen  # at least one attack-side block was checked
+
+
 def test_filters_that_leave_no_games_return_an_empty_report(real):
     # The dashboard used to read rep.pool before checking rep.empty and crashed, leaving no way to clear the
     # filters. An empty report carries only what the front end needs to say so; the drawer's options still load.

@@ -298,11 +298,20 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
 
 def _map_aggression(scope: Scope, map_name: str, holder_rounds: int) -> dict | None:
     """Early setup on one map: the holder's median first position in the first 30 s against other teams' setups
-    on that map (the report's aggression summary for the map scope), or None below MIN_SAMPLE setups."""
-    if holder_rounds < MIN_SAMPLE:  # at most one setup per holder-round: skip the league pass when it can't qualify
+    on that map (the report's aggression summary for the map scope), or None below MIN_SAMPLE setups.
+
+    `percentile` is the share of other teams' setups the team's median is further forward than. Aggression runs
+    0 (defender spawn) to 1 (attacker spawn), so forward means higher on defense and lower on attack. With both
+    sides shown, attack and defense setups would be pooled into one meaningless number, so it is None."""
+    if scope.side is None or holder_rounds < MIN_SAMPLE:  # at most one setup per holder-round
         return None
-    a = operator_report(replace(scope, maps=(map_name,))).aggression_summary()
-    return a if a.get("median") is not None and a["n"] >= MIN_SAMPLE else None
+    rep = operator_report(replace(scope, maps=(map_name,)))
+    a = rep.aggression_summary()
+    if a.get("median") is None or a["n"] < MIN_SAMPLE:
+        return None
+    if scope.side == "attacker":
+        a = {**a, "percentile": float((rep.league_aggression > a["median"]).mean())}
+    return a
 
 
 @lru_cache(maxsize=32)
