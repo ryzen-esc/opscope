@@ -299,7 +299,8 @@ def operator(scope: Scope) -> dict:
         au, av = _view(m, sl["ax"], sl["ay"])
         tu, tv = _view(m, sl["tx"], sl["ty"])
         per_map[m] = {
-            "gun_rounds": int(r.holders["map"].eq(m).sum()),
+            # Distinct rounds (two holders in one round count once), the same count as by_map and the map chips.
+            "gun_rounds": int(maps.loc[maps["map"] == m, "gun_rounds"].iloc[0]),
             "rounds": int(maps.loc[maps["map"] == m, "rounds"].iloc[0]),
             # One entry per recorded moment of the holder: via = what GRID logged (shot = dealt damage, hit = took
             # damage, cast = used an ability), what = those events in words.
@@ -341,7 +342,10 @@ def operator(scope: Scope) -> dict:
                       f"{r.n_rounds} rounds.")
     peer = (f"typical {r.league_label} team" if r.league_method == "typical team" else f"all other {r.league_label}")
     lo, hi = wilson(r.n_gun_rounds, r.n_rounds)
-    kept, kept_n = r.kept()
+    # Survived with it, per gun round (a holder alive at round end with the gun), so it is out of the headline k.
+    # r.kept() counts holder-rounds, which double-counts rounds with two holders.
+    kept_by_round = r.holders.groupby(["game_id", "round_num"])["kept"].any()
+    kept, kept_n = int(kept_by_round.sum()), len(kept_by_round)
     w = r.win_rates("full")
     fb = r.first_shot_buckets()
     aggr = r.aggression_summary() if scope.maps else None

@@ -129,3 +129,12 @@ def test_every_plan_item_links_its_own_finding(real):
             assert 0 <= p["index"] < len(rep["insights"]), (team, p["headline"])
             assert rep["insights"][p["index"]] == p["evidence"], (team, p["headline"])
         assert len({p["index"] for p in rep["plan"]}) == len(rep["plan"])
+
+
+def test_operator_counts_distinct_gun_rounds(real):
+    # NRG has rounds with two Operator holders: per-map counts and "Survived" must count each round once,
+    # so the HUD, the < 8 note and the "seen" panel agree with the rate-by-map rows and the headline k.
+    op = real.get("/api/operator?team=97&weapon=operator&side=defender").json()
+    for row in op["by_map"]:
+        assert op["maps"][row["map"]]["gun_rounds"] == row["k"], row["map"]
+    assert op["kept"]["n"] == op["rate"]["k"] and op["kept"]["k"] <= op["kept"]["n"]
