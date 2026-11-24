@@ -215,8 +215,9 @@ def test_early_setup_reads_forward_on_both_sides(real):
 
 
 def test_filters_that_leave_no_games_return_an_empty_report(real):
-    # The dashboard used to read rep.pool before checking rep.empty and crashed, leaving no way to clear the
-    # filters. An empty report carries only what the front end needs to say so; the drawer's options still load.
+    # Pins the payload contract the dashboard's empty branch reads (the crash itself was in dashboard.js, which
+    # read rep.pool before rep.empty; that fix was checked by hand in the browser). An empty report carries only
+    # team, name, self_scout and empty, and the Filters drawer's options still load so the filters can be cleared.
     rep = real.get("/api/report?team=79&patches=0.01").json()
     assert rep["empty"] is True and rep["team"] == "79" and rep["name"] and rep["self_scout"] is True
     assert "pool" not in rep and "insights" not in rep
