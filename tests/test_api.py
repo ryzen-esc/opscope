@@ -55,6 +55,17 @@ def test_foreign_host_is_refused(tmp_path):
     assert TestClient(app).get("/api/meta").status_code == 400  # TestClient's default "testserver" host too
 
 
+def test_events_a_few_ms_apart_share_one_tick():
+    import pandas as pd
+    from opscope.present import _ticks
+    f = pd.DataFrame({"game_id": ["g"] * 5 + ["h"], "round_num": [1, 1, 1, 1, 2, 1],
+                      "t": [23.649, 23.65, 23.61, 30.0, 23.65, 23.65]})
+    tick = {(g, r, t): k for g, r, t, k in _ticks(f).itertuples(index=False)}
+    assert tick[("g", 1, 23.649)] == tick[("g", 1, 23.65)] == 23.6  # damage + kill 1 ms apart, across .x5
+    assert tick[("g", 1, 23.61)] == 23.6 and tick[("g", 1, 30.0)] == 30.0
+    assert tick[("g", 2, 23.65)] == tick[("h", 1, 23.65)] == 23.6  # other rounds and games start their own run
+
+
 # ---- against the real local cache (skipped where it hasn't been built) --------------------------------
 
 @pytest.fixture

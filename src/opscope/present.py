@@ -245,6 +245,23 @@ def _weapon(w) -> str:
     return "weapon" if w is None or w != w or w == "unknown" else pretty(w)
 
 
+TICK_GAP = 0.005  # s: events logged this close together are one moment
+
+
+def _ticks(*frames: pd.DataFrame) -> pd.DataFrame:
+    """Map every raw (game, round, t) to the tick it is shown at: runs of times less than TICK_GAP apart share
+    the first one's time, rounded to 0.1 s."""
+    k = ["game_id", "round_num", "t"]
+    t = pd.concat([f[k] for f in frames]).drop_duplicates().sort_values(k, ignore_index=True)
+    new = ((t["t"].diff() > TICK_GAP) | t["game_id"].ne(t["game_id"].shift())
+           | t["round_num"].ne(t["round_num"].shift()))
+    return t.assign(tick=t["t"].where(new).ffill().round(1))
+
+
+def _to_tick(f: pd.DataFrame, tick: pd.DataFrame) -> pd.DataFrame:
+    return f.merge(tick, on=["game_id", "round_num", "t"], how="left").drop(columns="t").rename(columns={"tick": "t"})
+
+
 def _moments(pos: pd.DataFrame) -> pd.DataFrame:
     """Merge a holder's recorded positions into moments (same round and shown time) and say what happened in each.
 
@@ -257,12 +274,15 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
     names = _player_names()
     keys = ["game_id", "round_num", "t"]
     # Group on the time shown (0.1 s): GRID sometimes logs a kill 1 ms after its damage, and the two belong to
-    # one moment ("killed X with the Operator (150 damage)"), not two stacked dots. The dot sits at the first
-    # position logged in that tick (a cast and a hit can be logged a metre apart).
-    pos = pos.sort_values(keys, kind="stable").assign(t=lambda p: p["t"].round(1))
+    # one moment ("killed X with the Operator (150 damage)"), not two stacked dots. Times within TICK_GAP of each
+    # other share the tick of the first, so a pair straddling a rounding boundary (23.649 / 23.650) stays one
+    # moment. The dot sits at the first position logged in that tick (a cast and a hit can be a metre apart).
+    games = pos["game_id"].unique()
+    e = d.engagements[d.engagements["game_id"].isin(games)][keys + ["kind", "actor_id", "target_id", "weapon", "damage"]]
+    c = d.casts[d.casts["game_id"].isin(games)][keys + ["player_id", "ability"]]
+    tick = _ticks(pos, e, c)
+    pos, e, c = (_to_tick(f, tick) for f in (pos.sort_values(keys, kind="stable"), e, c))
     who = pos[keys + ["player_id"]].drop_duplicates()
-    e = d.engagements[keys + ["kind", "actor_id", "target_id", "weapon", "damage"]]
-    e = e.assign(t=e["t"].round(1))
     lines: dict[tuple, list[str]] = {}
 
     def add(key, text):
@@ -282,8 +302,7 @@ def _moments(pos: pd.DataFrame) -> pd.DataFrame:
         name = names.get(a, "an enemy")
         add((g, rn, t, tgt), f"was killed by {name}'s {w}" if (x["kind"] == "kill").any()
             else f"took {dmg:.0f} from {name}'s {w}")
-    c = d.casts[keys + ["player_id", "ability"]]
-    c = c.assign(t=c["t"].round(1)).merge(who, on=keys + ["player_id"])
+    c = c.merge(who, on=keys + ["player_id"])
     for (g, rn, t, pid), x in c.groupby(keys + ["player_id"]):
         for ab in x["ability"].unique():
             add((g, rn, t, pid), f"used {pretty(ab)}")
