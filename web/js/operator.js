@@ -139,7 +139,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     // The rounds behind this map's dots, oldest first: "Round 3 of 6" means the third of those.
     order = [...new Set([...m.positions.map((p) => p.round), ...m.kills.map((k) => k.round)])].sort((a, b) => {
       const ra = data.rounds[a], rb = data.rounds[b];
-      return (ra.date || "").localeCompare(rb.date || "") || ra.game.localeCompare(rb.game) || ra.round_num - rb.round_num;
+      return (ra.started || "").localeCompare(rb.started || "") || ra.game.localeCompare(rb.game) || ra.round_num - rb.round_num;
     });
     rank = new Map(order.map((r, i) => [r, i + 1]));
     st.round = null;

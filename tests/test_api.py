@@ -144,3 +144,16 @@ def test_zero_gun_sentence_uses_the_right_article(real):
     op = real.get("/api/operator?team=79&weapon=operator&side=attacker&opponents=1079").json()
     assert op["rate"]["k"] == 0
     assert "never had an Operator" in op["glance"][0]
+
+
+def test_rounds_carry_their_full_start_time(real):
+    # "Round k of n here" counts oldest first; with only the date, two games on one map on the same UTC day
+    # were ordered by game id. The full start time sorts them (ISO UTC strings sort as text).
+    ut = real.get("/api/utility?team=1079&side=defender").json()
+    rounds = [r for r in ut["rounds"] if r["map"] == "split"]
+    assert rounds and all(r["started"] and r["started"][:10] == r["date"] for r in rounds)
+    by_day = {}
+    for r in rounds:
+        by_day.setdefault(r["date"], set()).add((r["started"], r["game"]))
+    assert any(len(g) > 1 for g in by_day.values())  # the case that used to fall back to the game id
+    assert all(len({s for s, _ in g}) == len(g) for g in by_day.values())  # and the start time tells them apart

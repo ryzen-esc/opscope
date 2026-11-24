@@ -383,6 +383,8 @@ def _round_info(r, rounds_index: dict) -> list[dict]:
         h = hold.loc[(g, rn)] if (g, rn) in hold.index else None
         out[i] = {"game": g, "round_num": int(rn), "map": None if row is None else row["map"],
                   "date": None if row is None else str(row["started_at"])[:10],
+                  # full UTC start (ISO, sorts as text): orders two games on one map on the same date
+                  "started": None if row is None else str(row["started_at"]),
                   "opponent": None if row is None else team_name(row["opp_id"]),
                   "won": None if row is None else bool(row["won"]),
                   "holder": None if h is None else h["player_name"], "agent": None if h is None else h["agent"]}
