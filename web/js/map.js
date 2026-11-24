@@ -76,13 +76,15 @@ export function drawMap(svg, geo, opts = {}) {
 
   let now = base.slice(), raf = 0;
   /** Animate the camera to centre `at` at `zoom` (1 = whole map); null resets. */
-  function focus(at, zoom = 1, ms = 1200) {
+  function focus(at, zoom = 1, ms = 1200, { shift = 0 } = {}) {
     let target = base.slice();
     if (at && zoom > 1) {
-      // Centre on the spot, but keep the camera inside the map so an edge spot never shows empty space.
+      // Centre on the spot (moved left by `shift` of the view, to clear a panel on the right), but keep the camera
+      // inside the map so an edge spot never shows empty space.
       const w = base[2] / zoom, h = base[3] / zoom;
       const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-      target = [clamp(at[0] - w / 2, base[0], base[0] + base[2] - w), clamp(at[1] - h / 2, base[1], base[1] + base[3] - h), w, h];
+      const cx = at[0] + shift * w;
+      target = [clamp(cx - w / 2, base[0], base[0] + base[2] - w), clamp(at[1] - h / 2, base[1], base[1] + base[3] - h), w, h];
     }
     cancelAnimationFrame(raf);
     if (reduced || ms <= 0) { now = target; svg.setAttribute("viewBox", now.join(" ")); return; }

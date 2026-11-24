@@ -202,8 +202,10 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
     const ev = p.evidence;
     const row = document.createElement("a");
     row.className = "row reveal";
-    row.href = `?view=dashboard&team=${encodeURIComponent(team)}`;
+    const idx = rep.insights.findIndex((x) => x.map === ev.map && x.side === ev.side && x.category === ev.category && x.k === ev.k && x.n === ev.n);
+    row.href = `?view=dashboard&team=${encodeURIComponent(team)}&sel=${idx}`;
     row.dataset.go = "dashboard";
+    row.dataset.sel = idx;
     row.innerHTML = `<div class="i">0${j + 4}</div>
       <div><div class="h">${p.headline}</div><div class="d">${esc(ev.label)} · ${esc(title(ev.map))}</div></div>
       <div class="eb"></div>
@@ -214,7 +216,10 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
     disposers.push(onEnter(row, () => b.play(150), { threshold: 0.6 }));
   });
 
-  app.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); go(a.dataset.go); }));
+  app.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    go(a.dataset.go, a.dataset.sel != null && a.dataset.sel >= 0 ? { sel: a.dataset.sel } : {});
+  }));
   disposers.push(reveals(app));
   return () => disposers.forEach((d) => d());
 }

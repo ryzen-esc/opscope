@@ -1,5 +1,6 @@
 // App shell: URL state (?team=…&view=…), the team palette, view switching and loading/setup screens.
 import { api, ApiError } from "./api.js";
+import { renderDashboard } from "./dashboard.js";
 import { esc, renderOverview } from "./overview.js";
 import { scrollToTop, smoothScroll } from "./motion.js";
 import { setupPalette } from "./palette.js";
@@ -8,20 +9,39 @@ const app = document.getElementById("app");
 const VIEWS = ["overview", "dashboard", "method"];
 let meta = null, dispose = () => {}, renderToken = 0;
 
+const FILTERS = ["opponents", "patches", "events"];
+
 function state() {
   const q = new URLSearchParams(location.search);
   const team = q.get("team") || meta?.quick_picks?.[0]?.id || "79";
   const view = VIEWS.includes(q.get("view")) ? q.get("view") : "overview";
-  return { team, view };
+  const filters = Object.fromEntries(FILTERS.map((k) => [k, q.getAll(k)]));
+  return { team, view, filters };
 }
 
+/** Change team, view or filters: a new history entry and a full render. Tab-level state is dropped. */
 function navigate(next, { replace = false } = {}) {
-  const s = { ...state(), ...next };
+  const cur = state();
+  const team = next.team ?? cur.team, view = next.view ?? cur.view;
   const q = new URLSearchParams();
-  q.set("team", s.team);
-  if (s.view !== "overview") q.set("view", s.view);
+  q.set("team", team);
+  if (view !== "overview") q.set("view", view);
+  const keepFilters = !next.team || next.team === cur.team;
+  for (const k of FILTERS) for (const v of (next[k] ?? (keepFilters ? cur.filters[k] : []))) q.append(k, v);
+  for (const k of ["tab", "sel", "map", "side"]) if (next[k] != null) q.set(k, next[k]);
   history[replace ? "replaceState" : "pushState"](null, "", `?${q}`);
   render();
+}
+
+/** Tab-level state (tab, map, side, selection…): rewrite the URL in place, no render. Arrays repeat the key. */
+function setParams(patch) {
+  const q = new URLSearchParams(location.search);
+  for (const [k, v] of Object.entries(patch)) {
+    q.delete(k);
+    if (v == null || v === "") continue;
+    for (const item of Array.isArray(v) ? v : [v]) if (item != null && item !== "") q.append(k, item);
+  }
+  history.replaceState(null, "", `?${q}`);
 }
 
 function toast(msg) {
@@ -43,7 +63,7 @@ function showSetup(body) {
 
 async function render() {
   const token = ++renderToken;
-  const { team, view } = state();
+  const { team, view, filters } = state();
   dispose();
   dispose = () => {};
   document.querySelectorAll("#views a").forEach((a) => a.classList.toggle("on", a.dataset.view === view));
@@ -52,11 +72,9 @@ async function render() {
   document.title = `${label} · OpScope`;
   scrollToTop();
 
-  if (view !== "overview") {
-    app.innerHTML = `<section class="soon"><div><div class="kicker">Next build step</div>
-      <h2>${view === "dashboard" ? "The dashboard" : "How it works"}</h2>
-      <p>${view === "dashboard" ? "Every tendency on the map, with the round-by-round timeline. Coming in the next step."
-        : "The method and its limits. Coming in a later step."}</p>
+  if (view === "method") {
+    app.innerHTML = `<section class="soon"><div><div class="kicker">Later build step</div><h2>How it works</h2>
+      <p>The method and its limits.</p>
       <p style="margin-top:22px"><a class="btn" href="?team=${encodeURIComponent(team)}" id="back">Back to the overview</a></p></div></section>`;
     app.querySelector("#back").addEventListener("click", (e) => { e.preventDefault(); navigate({ view: "overview" }); });
     return;
@@ -64,10 +82,14 @@ async function render() {
 
   app.innerHTML = LOADING(`Building the scouting report for ${label}…`);
   try {
-    const rep = await api.report(team);
+    const rep = await api.report(team, filters);
     if (token !== renderToken) return;
     app.innerHTML = "";
-    dispose = await renderOverview(app, { meta, team, report: rep, go: (v) => navigate({ view: v }), setTeam });
+    if (view === "dashboard") {
+      dispose = await renderDashboard(app, { meta, team, filters, params: new URLSearchParams(location.search), setParams, navigate });
+    } else {
+      dispose = await renderOverview(app, { meta, team, report: rep, go: (v, extra = {}) => navigate({ view: v, ...extra }), setTeam });
+    }
   } catch (e) {
     if (token !== renderToken) return;
     if (e instanceof ApiError && e.status === 503) return showSetup(e.body);

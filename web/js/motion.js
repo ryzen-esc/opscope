@@ -66,3 +66,5 @@ export function scrollToTop() {
 export function scrollToNode(node) {
   if (lenis) lenis.scrollTo(node, { duration: 1.4 }); else node.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
 }
+export function lenisStop() { lenis?.stop(); }
+export function lenisStart() { lenis?.start(); }
