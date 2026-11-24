@@ -206,8 +206,11 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     const noSpot = noSpotNote(ev);
     c.classList.remove("in");
     const base = ev.category === "Utility" ? "typical player" : "typical team";
+    // The link opens the tab as the finding was measured: Utility settings left from an earlier visit (phase, players,
+    // landing view) would recompute the habits and could hide the one this card is about.
     const target = ev.category === "Operator" ? { tab: "operator", weapon: ev.tags?.weapon, map: ev.map, side: ev.side }
-      : ev.category === "Utility" ? { tab: "utility", classes: ev.tags?.util_class, map: ev.map, side: ev.side } : null;
+      : ev.category === "Utility" ? { tab: "utility", classes: ev.tags?.util_class, map: ev.map, side: ev.side,
+        phase: null, uview: null, aim: null, spots: null, player: null } : null;
     setTimeout(() => {
       c.innerHTML = `<button class="x" type="button" aria-label="Close">×</button>
         <div class="k"><span class="chip ${sideCls(ev.side)}">${sideWord(ev.side)}</span>${esc(ev.label)} · ${esc(title(ev.map))}</div>
