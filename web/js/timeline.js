@@ -77,6 +77,7 @@ export function createTimeline(host, opts) {
   track.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") { e.preventDefault(); setPlaying(false); set(Math.floor(t) + 1); }
     if (e.key === "ArrowLeft") { e.preventDefault(); setPlaying(false); set(Math.ceil(t) - 1); }
+    if (e.key === " ") { e.preventDefault(); setPlaying(!playing); } // the global handler skips a focused track
   });
   playBtn.addEventListener("click", () => setPlaying(!playing));
   host.querySelectorAll(".tl-speeds button").forEach((b) => b.addEventListener("click", () => {
