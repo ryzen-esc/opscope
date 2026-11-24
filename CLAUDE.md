@@ -5,38 +5,61 @@ Eli's entry in the **Cloud9 x JetBrains "Sky's The Limit" Hackathon 2026** (Devp
 **Deadline: Jan 12, 2027, 11:00am PT** (aim to submit by Jan 9). Judging Jan 27–Feb 3, 2027.
 Public repo: **https://github.com/ryzen-esc/opscope**.
 
-## Where things stand (updated Nov 23, 2026, evening)
-- **All features and docs are done, reviewed and published.** 44 tests pass (`uv run pytest`).
-- **Design pass in progress** (Nov 23). Done and committed locally, **10 commits NOT pushed yet** (incl. this CLAUDE.md update) (`main` is ahead of
-  `origin/main`). Ask Eli before pushing.
-  - **Eli is reviewing the new Briefing report.** Next proposed step (waiting on Eli): give the Operator and Utility pages
-    the same "briefing" treatment (their right-hand rails still show a lot at once).
-  - Not visually verified: the branded loading screen (`SPLASH_HTML`); data loads in <1 s so it barely shows.
-- **Left (Eli's tasks, see `notes/SUBMISSION_CHECKLIST.md`):**
-  - Eli's play-test.
-  - Screenshots into `docs/screenshots/` (then add them to the README; there's a placeholder comment near its top).
-    Take them after the design pass settles.
-  - Demo video from `notes/DEMO_SCRIPT.md` (on-screen cues updated for the new layout), uploaded to YouTube as public.
-  - Devpost submission from `notes/DEVPOST.md`.
-  - Optional: more JetBrains AI use, then update the tool lists in README + DEVPOST.
-- **Done:** AI training opt-out for both JetBrains AI and Claude; repo public; README clone URL set.
-- **Before submitting:** run the final check. Fresh clone in the scratchpad → `uv sync` → `uv run pytest` → small build (`--series 2748746 --series 2972877`) → render all pages with `streamlit.testing.v1.AppTest`. Also re-check every number quoted in the docs against the app.
+## Where things stand (checkpoint: Nov 23, 2026, ~midnight)
+- **Redesign in progress: a new web app replaces the Streamlit UI.** Analytics and numbers are unchanged. 56 tests pass
+  (`uv run pytest`). **23 commits are local only** (`main` ahead of `origin/main`); ask Eli before pushing.
+- **Plan** (approved by Eli; full text in `/Users/eli/.claude/plans/a-look-good-as-expressive-riddle-of-d17ce326-734c-4f59-8f9c-47ddc1d32f21.md`):
+  1. ✅ Accurate maps (official minimap frame + traced minimaps). 2. ✅ JSON API + local server. 3. ✅ Overview story.
+  4. ✅ Dashboard + Briefing tab. 5. ✅ Operator tab + round clock. 6. ✅ Utility tab.
+  7. **Next:** Map pool tab (still a "soon" placeholder), How it works page (port `views/about.py`: pipeline numbers from
+     `/api/meta`, evidence-bar anatomy, method, limits; the nav link is a placeholder), polish (loading/empty states, view
+     transitions, narrower screens, keyboard help).
+  8. Retire Streamlit: remove `app.py`, `views/`, Streamlit-only `ui/` code, `.streamlit/`, the dependency and
+     `tests/test_app.py`; update `.run/` configs, README run steps (`uv run opscope`), METHODOLOGY references,
+     `notes/DEMO_SCRIPT.md`, `SUBMISSION_CHECKLIST.md`, AI_SHOWCASE/DEVPOST tool lists, and this file. Then the final check.
+- **Eli's review style:** he reviews each step in Chrome (`http://127.0.0.1:8000/…`) and sends screenshots of anything
+  confusing. Every question so far was a real gap (see "Lessons" below); answer from the data, then offer the fix.
+- **Left for Eli (`notes/SUBMISSION_CHECKLIST.md`):** play-test, screenshots (after the redesign), demo video from
+  `notes/DEMO_SCRIPT.md` (needs rewriting for the new app), Devpost from `notes/DEVPOST.md`.
+- **Before submitting:** fresh clone in the scratchpad → `uv sync` → `uv run pytest` → small build
+  (`--series 2748746 --series 2972877`) → `uv run opscope` renders every view; re-check every number quoted in the docs.
 
-## The product (what judges see)
-Streamlit app (`app.py` → pages in `views/`, page tabs in the top bar, filters in the sidebar):
-- **Scouting report** (front page), a one-screen **briefing**: quick-pick teams (Cloud9 self-scout, NRG, Sentinels, G2,
-  Cloud9 GC); dossier header (team, roster chips, record, attack/defense win rates); **"3 things to know about X"**
-  (Cloud9: "3 habits most worth varying"), each with rate, advice, evidence bar and a "View the …" link; the rest of the
-  game plan as one-line rows that expand on click; then **Details** tabs: all tendencies, map breakdown (plant sites,
-  predictable utility, tendency counts per map), map pool. The Side filter is greyed out here (the report covers both sides).
-- **Operator profiler:** Operator/Odin/Outlaw/Marshal. Map-first layout: one control bar (weapon, map, time in round,
-  kill lines), map on the left with a key above it (dots = holder positions, ring→✕ lines = kills, filtered by the same
-  time window), "At a glance" rail on the right (who holds it, rate vs typical team, full-buy win rates, first-shot timing),
-  rate by map below. Amber note under 8 gun rounds, or when a map has none ("that absence is the finding").
-- **Utility profiler:** casts by class and phase, habit spots (same spot within 4 m), aim arrows, and validated landing
-  estimates for 12 damaging abilities. Same map-first layout; view toggle "Cast spot / Landing (est.)".
-- **How it works:** five-step pipeline (read, correct, rebuild, compare, show) with live numbers, a labelled example of the
-  evidence bar, then the method and its limits.
+## The product: new web app (what judges will see)
+`uv run opscope` (`server.py`) serves `web/` and the JSON API on **127.0.0.1:8000** only and opens a browser. Preview
+config `opscope-web` in `/Users/eli/hackathon/.claude/launch.json`. Plain HTML/CSS/ES modules, no build step; Lenis
+(MIT) vendored in `web/vendor/`. State lives in the URL (`?team=79&view=dashboard&tab=operator&map=haven&side=defender…`).
+- **Overview** (`web/js/overview.js`): hero dossier (name, record/win rates counting up, roster, most-played map drawing
+  in, quick picks), then the top 3 game-plan items told over a sticky map that flies to each spot with its evidence bar,
+  then plan items 4–8 as rows (they open that finding in the dashboard), then "Open the dashboard". Items are labelled
+  "Plan 01…" to match the dashboard's PLAN tags.
+- **Dashboard** (`dashboard.js` frame): tabs Briefing · Operator · Utility · Map pool (keys 1–4), map chips (badge = tendencies
+  / gun rounds / casts per tab), a "Show" side toggle, a Filters drawer (opponents/event/patch: these recompute the numbers;
+  a banner says so), left rail, centre map, floating card/live panel, bottom strip/timeline.
+  - **Briefing** (`briefing.js`): every tendency, numbered by **rank** (`#1` = most unusual and best supported; ranks don't
+    change when filtering); `PLAN 0N` tag = its number in the overview. Selecting (click/↑↓) flies the map and opens an
+    evidence card with the game-plan advice (self-scout: tip only) and a link to the Operator/Utility tab with filters set.
+    Findings with no single spot say so. Bottom strip: plant share per site vs the **typical team** (same as the findings).
+  - **Operator** (`operator.js`): weapon switch, rate vs typical, rate by map (click to switch), who holds it, first-shot
+    timing, full-buy wins with/without (95% ranges), survived. Map + **round clock** (`timeline.js`: play/drag/←→, 1×/2×/4×,
+    Build up / Moment = last 5 s). A **dot is one recorded moment of the holder**: they dealt damage, took damage or used
+    an ability (GRID has no missed shots or movement), with whatever was in hand; same-tick events are merged and listed
+    (a trade shows both). Kill lines = kills with the gun (ring = shooter, ✕ = victim). The map **overlays every round by
+    time in round**: each dot names its round ("Round 1 of 6 here · map round 5 vs X, date · lost"), hover lights the round
+    up with a path, "Watch one round" / click plays a single round with a list of what GRID recorded; ‹ › or [ ] step.
+    Amber notes: 0 gun rounds ("that absence is the finding") or < 8.
+  - **Utility** (`utility.js`): type (traps default, recon, smokes, stalls, flashes, all), phase, Cast spot / Landing (est.),
+    aim lines (on by default for thrown utility), habit rings (4 m, ①②③, click to zoom), **player chips** (whole roster
+    that played the map; players with none of that utility greyed "no smokes here"; names in "Who uses what" also filter),
+    legend toggles (top 8 abilities coloured, rest grouped grey). Clock starts at −0:30 (buy phase ~28.5 s; earlier casts
+    sit at the start, real time in the tooltip). Same round labels / hover / watch-one-round as Operator.
+  - **Map pool**: placeholder ("soon").
+- The **Streamlit app** (`app.py`, `views/`, `ui/`) still exists and works until step 8; don't spend effort on it.
+
+## Lessons from Eli's reviews (keep doing these)
+- Maps were mirrored: GRID x/y map to the minimap with axes swapped. Fixed with the valorant-api transform (see Design).
+- Explain what a mark means on the page itself: rank vs plan numbers, filters vs view controls, "no single spot",
+  what a dot is, why dots at the same time come from different rounds, why only 3 players show.
+- Verify claims in the raw data before answering (e.g. the "kill + took damage" dot was a real trade at 0:08.9).
 
 ## Design (Nov 23 design pass)
 - **Style:** "tactical dossier", chosen by Eli from mockups: dark navy (`#0b0f14`), cyan accent `#00AEEF` (= defense),
@@ -56,7 +79,11 @@ Streamlit app (`app.py` → pages in `views/`, page tabs in the top bar, filters
 - **Map frame:** GRID x/y map onto the official minimap with x and y swapped (`u = y·x_mult + x_add`,
   `v = x·y_mult + y_add`, constants in `src/opscope/minimaps.yaml`). The old plots (x right, y up) were mirrored. Every
   layer must go through `geometry.to_view()`, which also turns each map so attackers start at the bottom.
-- **Code:** `ui/theme.py` (palette, Plotly template `opscope`, `chart()` which must be used instead of `st.plotly_chart`
+- **New web app look:** same dark tactical palette (`--def #00aeef`, `--atk #f2545b`, `--amb #f5b43c`), Big Shoulders
+  Display headings, Inter body, JetBrains Mono numbers (Google Fonts). Time in round uses a cool ramp (light blue → purple),
+  so red only means attack and kills. Evidence bar = `web/js/evidence.js`; map renderer = `web/js/map.js` (`drawMap`,
+  `focus` with camera clamped inside the map, `pulse`, `highlightSite`, `findingAt`).
+- **Legacy Streamlit code (until step 8):** `ui/theme.py` (palette, Plotly template `opscope`, `chart()` which must be used instead of `st.plotly_chart`
   because Streamlit's chart theme overrides the template, `count_axis()` for whole-number axes); `ui/brand.py` (icon,
   wordmark, splash); `ui/cards.py` (all CSS, `evidence_bar`, `brief_card`, `plan_rows`, `dossier_header`, `page_header`,
   `insight_card`, `rate_card`, `map_key`, `pipeline`, `evidence_anatomy`); `ui/links.py` ("View the …" links: a button
@@ -72,12 +99,12 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - `METHODOLOGY.md`: full method + validation + limits. `views/about.py` is the in-app short version.
 - `AI_SHOWCASE.md`: the AI workflow story, written in Eli's voice. `notes/AI_WORKFLOW_LOG.md`: add a row for each notable AI step.
 - `notes/`: `PLAN.md` (original roadmap M1–M6), `DEVPOST.md`, `DEMO_SCRIPT.md`, `SUBMISSION_CHECKLIST.md`.
-- **Figures quoted in the docs** (re-pull them if the data or method changes): C9 Op on Lotus defense 2 of 134 vs typical VCT 2025 team 8%; Haven 30 of 80 vs 19%; OXY 93 of 96 Op rounds; NRG Odin on Lotus defense 47 of 117 vs 11%; neT turret near Mid Boiler 25 of 26 vs typical Killjoy 64%; Viper wall typical = 100% (other 21 VCT 2025 Vipers); landing miss 21.3 m → 6.9 m on 171 held-out series; 13,255 rollbacks; 44 tests.
+- **Figures quoted in the docs** (re-pull them if the data or method changes): C9 Op on Lotus defense 2 of 134 vs typical VCT 2025 team 8%; Haven 30 of 80 vs 19%; OXY 93 of 96 Op rounds; NRG Odin on Lotus defense 47 of 117 vs 11%; neT turret near Mid Boiler 25 of 26 vs typical Killjoy 64%; Viper wall typical = 100% (other 21 VCT 2025 Vipers); landing miss 21.3 m → 6.9 m on 171 held-out series; 13,255 rollbacks; 56 tests.
 
 ## Data (GRID): hard rules
 - Lives at `$STL_DATA_DIR` = `/Users/eli/hackathon/stl-hackathon-2026-grid-starter` (sparse: val, val-ability-supplements, meta), outside the repo. Read its `AGENTS.md`/README for the format.
 - **Never copy, commit or redistribute the data** (or decompressed copies, extracts, caches). Stream `.zst` with `compression.zstd`; never decompress to disk. No real data in tests or Junie prompts (tests use synthetic fixtures).
-- Before every commit/push: `git diff --cached --name-only | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb)$|cache/'` must print nothing. Never `git add` the cache.
+- Before every commit/push: `git diff --cached --name-only | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb|png)$|cache/'` must print nothing. Never `git add` the cache.
 - Committed derived files are aggregate only: `src/opscope/sites.yaml` (site centres), `src/opscope/callouts.yaml` (community callouts from valorant-api.com) and `src/opscope/minimaps.yaml` (public minimap transforms).
 - Track teams/players by **ID**, never by name. Times are UTC.
 
@@ -106,6 +133,14 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - Empty pandas frames: build boolean masks with an explicit `dtype=bool`.
 - Streamlit multiselects keep stale values: key them by their context. `use_container_width` is deprecated; use `width="stretch"`.
 - Library code under `src/` isn't hot-reloaded by Streamlit: restart the preview server after changing it.
+- New web app: `uv run opscope` has no auto-reload. After changing `src/` (e.g. `present.py`, `api.py`), restart it
+  (preview: `preview_stop` + `preview_start opscope-web`). Front-end files need only a reload (the server sends
+  `Cache-Control: no-cache`). Payloads are `lru_cache`d per scope inside the process.
+- Map geometry is cached as JSON in `cache/v1/geometry/` keyed by `GEOMETRY_VERSION`; bump it when the tracing or the
+  payload changes. Minimap PNGs are in `cache/v1/minimaps/` (gitignored, never commit).
+- Testing the front end from the preview pane: the pane is usually hidden, so animations stall; finish them with
+  `document.getAnimations().forEach(a => a.finish())` before screenshots. Lenis fights `window.scrollTo`; real wheel
+  scrolling works. Dispatch synthetic key events on `document.body`, not `document`.
 - The preview server started from this app gets stopped when the app closes its Browser pane; if Eli says the page won't
   load, check `lsof -iTCP:8501` and restart it. Eli can also run `uv run streamlit run app.py` himself.
 - Plotly needs `automargin` (set in the template) and maps use `constrain="domain"` so spawn badges never get clipped.
@@ -114,7 +149,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - The preview launch config lives at `/Users/eli/hackathon/.claude/launch.json` (name `opscope`, port 8501). PyCharm's "OpScope app" run config uses port 8502.
 
 ## Tools and workflow
-- **Stack:** Python 3.14, uv, pandas 3, plotly, streamlit, pyarrow, pytest. PyCharm project files are committed (`.idea/`: src = source root, cache excluded; shared run configs in `.run/`). Junie guidelines are in `.junie/guidelines.md`.
+- **Stack:** Python 3.14, uv, pandas 3, pyarrow, starlette + uvicorn (web app), pillow (minimap tracing), pytest + httpx2; plotly/streamlit until step 8. PyCharm project files are committed (`.idea/`: src = source root, cache excluded; shared run configs in `.run/`). Junie guidelines are in `.junie/guidelines.md`.
 - **JetBrains AI Ultimate** is active until Jan 22, 2027, with detailed data collection **off** (decline any consent prompt). Junie (Code mode) edits and runs code; AI Assistant "Chat" mode can't touch files.
 - **Division of labour:** JetBrains AI drafts small, well-specified showcase tasks (tests, commit messages, docs); Claude Code reviews and fixes them critically; core analytics stay with Claude. Log both honestly in `notes/AI_WORKFLOW_LOG.md`.
 - **Git:**
