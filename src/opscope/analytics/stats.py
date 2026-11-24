@@ -14,7 +14,11 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     denom = 1 + z * z / n
     centre = (p + z * z / (2 * n)) / denom
     half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
-    return max(0.0, centre - half), min(1.0, centre + half)
+    # The bounds are exactly 0 at k == 0 and exactly 1 at k == n; floating point can land a hair off (wilson(0, 44)
+    # gave 7e-18), which made surprise() see a gap from a typical rate of 0 that isn't there.
+    lo = 0.0 if k == 0 else max(0.0, centre - half)
+    hi = 1.0 if k == n else min(1.0, centre + half)
+    return lo, hi
 
 
 def pct(k: int, n: int) -> float:

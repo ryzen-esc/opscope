@@ -94,3 +94,10 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
     assert any(c["phase"] == "buy" and c["t"] <= 0 for c in lot["casts"])  # pre-round setups play before 0:00
     assert ut["rounds"][lot["casts"][0]["round"]]["opponent"] and "area" in lot["casts"][0]
     assert len(lot["players"]) >= 5  # the whole roster, including players with no traps
+
+
+def test_every_finding_is_clear_of_the_typical_team(real):
+    # 0 of n vs a typical 0% used to slip through as a "Rarely buy" finding (Wilson rounding at k = 0)
+    for team in ("79", "96", "97"):
+        for ins in real.get(f"/api/report?team={team}").json()["insights"]:
+            assert ins["base"] < ins["lo"] or ins["base"] > ins["hi"], (team, ins["k"], ins["n"], ins["base"])

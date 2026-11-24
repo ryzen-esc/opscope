@@ -3,6 +3,7 @@ import numpy as np
 
 from opscope import zones
 from opscope.analytics.insights import surprise
+from opscope.analytics.stats import wilson
 from opscope.zones import assign_site, kmeans
 
 
@@ -16,6 +17,20 @@ def test_surprise_grows_with_gap_and_sample():
     large = surprise(60, 120, 0.20)            # same 50% on 120 rounds
     assert 0 < small < large                   # more rounds, more confidence
     assert surprise(2, 134, 0.16) > 0          # "rarely" counts too (C9 Op on Lotus)
+
+
+def test_wilson_is_exact_at_the_edges():
+    for n in (1, 8, 31, 44, 47, 77, 94, 135):  # 44 and 135 used to give a lower bound of ~1e-18
+        assert wilson(0, n)[0] == 0.0 and wilson(n, n)[1] == 1.0
+        assert 0.0 < wilson(0, n)[1] < 1.0 and 0.0 < wilson(n, n)[0] < 1.0
+    assert wilson(0, 0) == (0.0, 0.0)
+
+
+def test_never_doing_what_the_typical_team_never_does_is_not_a_finding():
+    for n in (44, 47, 94, 135):
+        assert surprise(0, n, 0.0) == 0          # 0 of n vs a typical 0%: no gap
+        assert surprise(n, n, 1.0) == 0          # always vs always: no gap
+    assert surprise(0, 44, 0.20) > 0             # 0 of 44 vs a typical 20% is still "rarely"
 
 
 def test_kmeans_finds_separated_sites_in_stable_order():
