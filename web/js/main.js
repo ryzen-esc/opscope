@@ -19,8 +19,10 @@ function state() {
   return { team, view, filters };
 }
 
-/** Change team, view or filters: a new history entry and a full render. Tab-level state is dropped. */
-function navigate(next, { replace = false } = {}) {
+/** Change team, view or filters: a new history entry and a full render. Tab-level state is dropped, unless
+ * `keepTab` (a filter change on the dashboard): then tab, map, side and the tab's own settings stay, all but `sel`,
+ * whose finding indices change with the filters. */
+function navigate(next, { replace = false, keepTab = false } = {}) {
   const cur = state();
   const team = next.team ?? cur.team, view = next.view ?? cur.view;
   const q = new URLSearchParams();
@@ -28,6 +30,9 @@ function navigate(next, { replace = false } = {}) {
   if (view !== "overview") q.set("view", view);
   const keepFilters = !next.team || next.team === cur.team;
   for (const k of FILTERS) for (const v of (next[k] ?? (keepFilters ? cur.filters[k] : []))) q.append(k, v);
+  if (keepTab) {
+    for (const [k, v] of new URLSearchParams(location.search)) if (!["team", "view", "sel", ...FILTERS].includes(k)) q.append(k, v);
+  }
   for (const k of ["tab", "sel", "map", "side"]) if (next[k] != null) q.set(k, next[k]);
   history[replace ? "replaceState" : "pushState"](null, "", `?${q}`);
   render();

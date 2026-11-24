@@ -108,7 +108,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
     ];
     const filterBanner = fnames.length ? `<div class="fbanner"><span><b>Filtered:</b> every number is recomputed for ${esc(fnames.join(", "))}.</span>
       <button type="button" data-clear-filters>Clear</button></div>` : "";
-    ui.rail.addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) navigate({ opponents: [], patches: [], events: [] }); });
+    ui.rail.addEventListener("click", (e) => { if (e.target.closest("[data-clear-filters]")) navigate({ opponents: [], patches: [], events: [] }, { keepTab: true }); });
 
     // ---- tabs ----
     function showTab(k) {
@@ -179,10 +179,10 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
     const toggleDrawer = (open) => drawer.classList.toggle("open", open);
     $("#fbtn").addEventListener("click", () => toggleDrawer(!drawer.classList.contains("open")));
     drawer.querySelector("#dclose").addEventListener("click", () => toggleDrawer(false));
-    drawer.querySelector("#dclear").addEventListener("click", () => navigate({ opponents: [], patches: [], events: [] }));
+    drawer.querySelector("#dclear").addEventListener("click", () => navigate({ opponents: [], patches: [], events: [] }, { keepTab: true }));
     drawer.querySelector("#dapply").addEventListener("click", () => {
       const pick = (k) => [...drawer.querySelectorAll(`input[data-f="${k}"]:checked`)].map((i) => i.value);
-      navigate({ opponents: pick("opponents"), patches: pick("patches"), events: pick("events") });
+      navigate({ opponents: pick("opponents"), patches: pick("patches"), events: pick("events") }, { keepTab: true });
     });
 
     onKey = (e) => {
