@@ -42,11 +42,10 @@ scope = UtilityScope(team_id=f["team_id"], side=f["side"], maps=f["maps"], oppon
 r = report(scope)
 side_txt = {"defender": "defense", "attacker": "attack"}.get(f["side"], "")
 unit = f"{side_txt} rounds".strip()
-with header_slot.container():
-    page_header("Utility profiler", team, f"{cls_label} · {', '.join(m.title() for m in f['maps']) or 'pick a map below'} · "
-                                          f"{f['side_label'].lower()} · {phase_label.lower()}")
 
 if r.n_rounds == 0:
+    with header_slot.container():
+        page_header("Utility profiler", team, "no rounds match these filters")
     st.info("No rounds match these filters.")
     st.stop()
 
@@ -62,6 +61,9 @@ with cb_map:
         map_name = st.selectbox("Map", list(played.index), format_func=lambda m: f"{m.title()} ({played[m]} {unit})",
                                 key="util_map")
 map_rounds = int((r.rounds["map"] == map_name).sum())
+with header_slot.container():
+    page_header("Utility profiler", team, f"{cls_label} · {map_name.title()} · {f['side_label'].lower()} · "
+                                          f"{phase_label.lower()}")
 
 # Cast spot vs estimated landing.
 all_casts = add_landings(r.casts)

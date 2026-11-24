@@ -34,11 +34,9 @@ scope = Scope(team_id=f["team_id"], weapon=weapon, side=f["side"], maps=f["maps"
 r = report(scope)
 side_txt = {"defender": "defense", "attacker": "attack"}.get(f["side"], "")
 unit = f"{side_txt} rounds".strip()
-with header_slot.container():
-    page_header("Operator profiler", team, f"{weapon_label} · {', '.join(m.title() for m in f['maps']) or 'all maps'} · "
-                                            f"{f['side_label'].lower()}")
-
 if r.n_rounds == 0:
+    with header_slot.container():
+        page_header("Operator profiler", team, "no rounds match these filters")
     st.info("No rounds match these filters.")
     st.stop()
 
@@ -51,9 +49,11 @@ with cb_map:
         st.selectbox("Map", [map_name], format_func=str.title, disabled=True, key="op_map_fixed",
                      help="Set by the Map filter in the sidebar.")
     else:
-        gun_maps = maps[maps["gun_rounds"] > 0].sort_values("gun_rounds", ascending=False)
-        options = list(gun_maps["map"]) or list(maps["map"])
+        # Maps with the gun first; the rest stay pickable (a report link can point at a "rarely buys" map).
+        options = list(maps.sort_values(["gun_rounds", "rounds"], ascending=False)["map"])
         map_name = st.selectbox("Map", options, format_func=str.title, key="op_map")
+with header_slot.container():
+    page_header("Operator profiler", team, f"{weapon_label} · {map_name.title()} · {f['side_label'].lower()}")
 with cb_time:
     buckets = st.multiselect("Time in round", bucket_names, default=bucket_names[:2], key="op_buckets") or bucket_names
 with cb_lines:
@@ -78,7 +78,12 @@ with left:
          f'<span style="color:{ATTACK}">◯—✕</span> Lines: their {gun} kills, shooter to victim',
          f"<b>{gun_rounds_map}</b> {gun} round{'' if gun_rounds_map == 1 else 's'} on {map_name.title()} · "
          f"{len(shown)} moments in {seen_rounds} of them"])
-    if 0 < gun_rounds_map < MIN_SAMPLE:
+    if gun_rounds_map == 0:
+        map_n = int(maps.loc[maps["map"] == map_name, "rounds"].sum())
+        insight(f"No {gun} on {map_name.title()} to draw: they had one in <b>0 of {map_n} {unit}</b> here. "
+                f"That absence is the finding" + ("." if f["maps"] else f"; compare maps in the {gun} rate chart below."),
+                AMBER)
+    elif gun_rounds_map < MIN_SAMPLE:
         plural = gun_rounds_map != 1
         insight(f"Only <b>{gun_rounds_map} {gun} round{'s' if plural else ''}</b> on {map_name.title()} "
                 f"match{'' if plural else 'es'} these filters: too few to read a setup. Clear the Opponents filter "

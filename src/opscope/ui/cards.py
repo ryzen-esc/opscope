@@ -109,6 +109,10 @@ h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} 
 [data-testid="stSpinner"] {{color:{ACCENT};font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:.06em;}}
 .ops-picks-label {{color:{TEXT_DIM};font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;}}
 
+/* ---- evidence links under cards ---- */
+[data-testid="stBaseButton-tertiary"] {{color:{ACCENT};font-size:.78rem;min-height:0;padding:2px 0;margin-top:-4px;}}
+[data-testid="stBaseButton-tertiary"]:hover {{color:#7fd6f7;}}
+
 /* ---- cards ---- */
 .ops-cut {{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);}}
 .ops-card {{background:{PANEL};border:1px solid {BORDER};padding:14px 16px;height:100%;animation:ops-in .25s ease-out;}}

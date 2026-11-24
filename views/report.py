@@ -13,6 +13,7 @@ from opscope.analytics.stats import MIN_SAMPLE, of, pct
 from opscope.load import CLOUD9_TEAMS, cohort_label, peer_group
 from opscope.ui.cards import CATEGORY_LABELS, dossier_header, headline_card, insight_card, page_header, suggestion_card
 from opscope.ui.filters import quick_picks, sidebar, team_name
+from opscope.ui.links import evidence_link, follow_link
 from opscope.ui.minimap import add_sites, base_map
 from opscope.ui.theme import ACCENT, ATTACK, BG, DEFENSE, NEUTRAL_BAR, chart
 from opscope.zones import sites
@@ -25,9 +26,11 @@ def insights_for(scope: Scope):
     return team_insights(scope)
 
 
+follow_link()  # a card's 'view' link may have asked for another page
 f = sidebar(side_applies=False)
 quick_picks(f["team_id"])
 tid = f["team_id"]
+MAP_KEY = f"report_map_{tid}"  # the map breakdown picker, per team
 team = team_name(tid)
 scope = Scope(team_id=tid, side=None, maps=f["maps"], opponents=f["opponents"], patches=f["patches"], events=f["events"])
 self_scout = tid in CLOUD9_TEAMS
@@ -66,6 +69,7 @@ items = insights_for(scope)
 plan = game_plan(items, self_scout=self_scout, limit=8)
 if plan:
     headline_card(plan[0].evidence, "Most predictable habit" if self_scout else "#1 thing to know")
+    evidence_link(plan[0].evidence, "ev_head", MAP_KEY)
 if self_scout:
     st.subheader("Predictability check")
     st.caption("What an opponent scouting this team would see: the habits most worth varying.")
@@ -80,6 +84,7 @@ if plan:
         with col:
             for n, sug in enumerate(chunk, start):
                 suggestion_card(sug, n, self_scout)
+                evidence_link(sug.evidence, f"ev_plan_{n}", MAP_KEY)
 else:
     st.info("Nothing stands out from the league strongly enough to plan around yet.")
 
@@ -92,9 +97,10 @@ if not shown:
     st.info("Nothing in this category stands out from the league with enough rounds behind it.")
 for row_start in range(0, len(shown), 3):
     cols = st.columns(3)
-    for col, ins in zip(cols, shown[row_start:row_start + 3]):
+    for j, (col, ins) in enumerate(zip(cols, shown[row_start:row_start + 3])):
         with col:
             insight_card(ins)
+            evidence_link(ins, f"ev_key_{row_start + j}", MAP_KEY)
 st.caption(f"{len(items)} tendencies found; showing the {len(shown)} furthest from the league. "
            f"A tendency is listed only when its 95% range doesn't overlap the league rate, with at least {MIN_SAMPLE} rounds.")
 
@@ -127,7 +133,7 @@ else:
         k = per_map.get(m, 0)
         return f"{m.title()} · {games_on[m]} maps played · {k} tendenc{'y' if k == 1 else 'ies'}"
 
-    map_name = st.selectbox("Map", map_opts, format_func=_map_label, key=f"report_map_{tid}")
+    map_name = st.selectbox("Map", map_opts, format_func=_map_label, key=MAP_KEY)
 left, right = st.columns([3, 2], gap="large")
 
 tr = _filter_rounds(team_rounds(), Scope(team_id=tid, side="attacker", maps=(map_name,), opponents=f["opponents"],
@@ -183,8 +189,10 @@ with right:
         st.caption("No plants recorded for this team on this map.")
     on_map = [i for i in items if i.map == map_name]
     st.markdown(f"**Tendencies on {map_name.title()}** ({len(on_map)} of {len(items)})")
-    for ins in on_map[:5]:
+    for j, ins in enumerate(on_map[:5]):
         insight_card(ins)
+        if ins.category != "Attack":  # plant sites are already on this map
+            evidence_link(ins, f"ev_map_{j}", MAP_KEY)
     if len(on_map) < 3:
         elsewhere = ", ".join(f"{m.title()} {k}" for m, k in per_map.most_common() if m != map_name)
         lead = "Nothing else on" if on_map else "Nothing on"
