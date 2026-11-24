@@ -35,7 +35,7 @@ Every claim carries its sample: **"k of n rounds"**.
 
 - **League (comparison group):** the same rate for every *other* team in the **same tier and season** (VCT 2025, Game Changers 2025, or Game Changers 2026), on the same map and side, with the same patch and event filters. Tiers and seasons are kept apart because they play on different patches and at different levels: the defense Op rate on Lotus is 10% in VCT 2025 but 17% in Game Changers. An early version compared everyone with everyone, which overstated VCT teams' differences. Teams that played in more than one season (30 Game Changers teams played both 2025 and 2026) are compared season by season, with each season's comparison weighted by the team's rounds in it.
 - **Typical team, not pooled rounds:** the comparison rate is the **median of each other team's own rate** (teams with at least 16 rounds; at least 4 such teams, otherwise it falls back to all rounds pooled). Pooling lets one extreme team drag the rate: in the worst cases one team held 28–49% of a group's gun rounds and moved the pooled rate by 8–12 points. Across 128 weapon/map/side groups the two methods differ by a median of 2.3 points. For rarely used guns the typical team is often at 0%, which is the honest answer: most teams never do it. For Cloud9 on Lotus the result is 2 of 134 Op rounds against 8% for the typical VCT 2025 team (16% in the first, mixed-tier version).
-- **95% range:** a Wilson score interval.
+- **95% range:** a Wilson score interval, exact at the edges: 0 of n has a lower bound of exactly 0, and n of n an upper bound of exactly 1. (Floating-point rounding used to leave 0 of n a hair above 0, so a team that never did something the typical team also never does was listed as a tendency.)
 - **Too few to call:** percentages are hidden below 8 rounds.
 - **When something is a tendency:** only when the team's 95% range does not overlap the comparison rate. The **surprise** score is the gap between them (0 if they overlap), so findings that are both unusual and well sampled rank first:
 
@@ -48,10 +48,10 @@ Every claim carries its sample: **"k of n rounds"**.
 ## 3. Operator profiler
 
 - **Ownership:** the primary weapon in each player's inventory at the end of the buy phase. Operator, Odin, Outlaw and Marshal are profiled separately.
-- **Survived with it:** the holder is alive at round end with the gun still in their inventory.
+- **Survived with it:** a gun round counts when a holder is alive at round end with the gun still in their inventory. Rounds are counted once, even with two holders.
 - **Changed hands:** someone fired the gun who didn't buy it.
 - **Where it sits:** every recorded position of the holder in those rounds (when they dealt damage, took damage or cast an ability, with whatever weapon they had in hand), shown as a density with 3 m bins and a blur, filtered by time since the buy phase. Positions are sparse: the median first sighting of an Op holder is 32 s into the round, so the map always says how many rounds it covers.
-- **Setup style:** the holder's first position within 30 s, scored `d_def / (d_def + d_atk)`, where `d_def` and `d_atk` are distances to the median defender and attacker spawn. This works on three-site maps, where a single spawn-to-spawn axis would not. The team's median is ranked against other teams' setups (same tier and season) on that map and side.
+- **Setup style:** the holder's first position within 30 s, scored `d_def / (d_def + d_atk)`, where `d_def` and `d_atk` are distances to the median defender and attacker spawn. This works on three-site maps, where a single spawn-to-spawn axis would not. The team's median is ranked against other teams' setups (same tier and season) on that map and side: "further forward than X%" means closer to the enemy spawn, so higher scores are forward on defense and lower scores on attack. It is shown per side only, since pooling attack and defense setups would mean nothing.
 - **Kill sightlines:** each kill with the gun is drawn from shooter to victim.
 
 ## 4. Utility profiler and habits

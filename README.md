@@ -41,7 +41,7 @@ uv run streamlit run app.py                # opens http://localhost:8501
 
 If you open the app before building the cache, it shows these steps instead of an error.
 
-**Tests:** `uv run pytest` (44 tests). They use synthetic GRID events; the page smoke test is skipped when no cache exists.
+**Tests:** `uv run pytest` (79 tests). They use synthetic GRID events; the tests that read your local cache (the page smoke test and the checks of the figures quoted here) are skipped when no cache exists.
 
 In **PyCharm**, the shared run configurations in `.run/` (OpScope app, Build cache, Tests, Explore data) appear automatically.
 

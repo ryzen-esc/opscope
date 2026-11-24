@@ -13,7 +13,7 @@
 
 ## Before pushing (all passed Nov 23, 2026; re-run before submitting)
 - [x] `git ls-files | grep -Ei '\.(zst|jsonl|parquet|sqlite|duckdb)$|stl-hackathon-2026-grid-starter'` prints nothing.
-- [x] `uv run pytest` passes (44 tests).
+- [x] `uv run pytest` passes (79 tests on Nov 24).
 - [x] A fresh clone in a temp folder → follow the README run steps → the app opens (tests the judge's path end to end).
 - [x] `.idea/` and `.junie/` are committed (the rules encourage it); `.idea/workspace.xml` is not.
 - [x] LICENSE (MIT) is at the root.
