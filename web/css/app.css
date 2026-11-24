@@ -390,3 +390,4 @@ body.board .progress { display: none }
 .tl-speeds button, .tl-modes button { background: none; border: 0; color: var(--dim); font: 600 11px var(--mono); padding: 4px 9px; cursor: pointer }
 .tl-speeds button + button, .tl-modes button + button { border-left: 1px solid var(--line) }
 .tl-speeds button.on, .tl-modes button.on { background: var(--panel2); color: #fff }
+.tip-lines { margin: 5px 0 0 16px; color: #c9d3dd } .tip-lines li { margin: 1px 0 }

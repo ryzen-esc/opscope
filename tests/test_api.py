@@ -82,7 +82,9 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
     lotus = next(m for m in op["by_map"] if m["map"] == "lotus")
     assert (lotus["k"], lotus["n"]) == (2, 134)
     pos = op["maps"]["haven"]["positions"][0]
-    assert {"at", "t", "round", "player", "area"} <= set(pos)
+    assert {"at", "t", "round", "player", "area", "via", "what"} <= set(pos)
+    assert all(p["what"] for p in op["maps"]["haven"]["positions"])  # every dot says what happened
+    assert all(k["victim"] for k in op["maps"]["haven"]["kills"])
 
     ut = real.get("/api/utility?team=79&side=defender&classes=trap").json()
     lot = ut["maps"]["lotus"]

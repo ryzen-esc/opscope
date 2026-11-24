@@ -211,6 +211,59 @@ def _round_index(df: pd.DataFrame, index: dict) -> list[int]:
     return out
 
 
+@cache
+def _player_names() -> dict:
+    return load().loadouts.drop_duplicates("player_id").set_index("player_id")["player_name"].to_dict()
+
+
+def _weapon(w) -> str:
+    return "weapon" if w is None or w != w or w == "unknown" else pretty(w)
+
+
+def _moments(pos: pd.DataFrame) -> pd.DataFrame:
+    """Merge a holder's recorded positions into moments (same round, time and spot) and say what happened in each.
+
+    A trade puts several events on one spot at one time (the holder's kill and the hit they took), so one dot
+    carries every line: "killed novaa with the Operator (150 dmg)", "took 40 from novaa's Vandal".
+    """
+    if pos.empty:
+        return pos.assign(via=[], what=[])
+    d = load()
+    names = _player_names()
+    keys = ["game_id", "round_num", "t"]
+    who = pos[keys + ["player_id"]].drop_duplicates()
+    e = d.engagements[keys + ["kind", "actor_id", "target_id", "weapon", "damage"]]
+    lines: dict[tuple, list[str]] = {}
+
+    def add(key, text):
+        lines.setdefault(key, []).append(text)
+
+    out = e.merge(who.rename(columns={"player_id": "actor_id"}), on=keys + ["actor_id"])
+    for (g, rn, t, a, tgt), x in out.groupby(keys + ["actor_id", "target_id"], dropna=False):
+        dmg = x["damage"].dropna().sum()
+        w = _weapon(x["weapon"].dropna().iloc[0] if x["weapon"].notna().any() else None)
+        name = names.get(tgt, "an enemy")
+        add((g, rn, t, a), f"killed {name} with the {w}" + (f" ({dmg:.0f} damage)" if dmg else "")
+            if (x["kind"] == "kill").any() else f"hit {name} for {dmg:.0f} with the {w}")
+    inc = e.merge(who.rename(columns={"player_id": "target_id"}), on=keys + ["target_id"])
+    for (g, rn, t, tgt, a), x in inc.groupby(keys + ["target_id", "actor_id"], dropna=False):
+        dmg = x["damage"].dropna().sum()
+        w = _weapon(x["weapon"].dropna().iloc[0] if x["weapon"].notna().any() else None)
+        name = names.get(a, "an enemy")
+        add((g, rn, t, tgt), f"was killed by {name}'s {w}" if (x["kind"] == "kill").any()
+            else f"took {dmg:.0f} from {name}'s {w}")
+    c = d.casts[keys + ["player_id", "ability"]].merge(who, on=keys + ["player_id"])
+    for (g, rn, t, pid), x in c.groupby(keys + ["player_id"]):
+        for ab in x["ability"].unique():
+            add((g, rn, t, pid), f"used {pretty(ab)}")
+    grouped = (pos.groupby(keys + ["player_id", "x", "y"], sort=False)
+               .agg(player_name=("player_name", "first"), agent=("agent", "first"), source=("source", lambda v: sorted(set(v))))
+               .reset_index())
+    grouped["what"] = [lines.get((g, rn, t, pid), []) for g, rn, t, pid in
+                       zip(grouped["game_id"], grouped["round_num"], grouped["t"], grouped["player_id"])]
+    return grouped
+
+
 @lru_cache(maxsize=32)
 def operator(scope: Scope) -> dict:
     r = operator_report(scope)
@@ -226,7 +279,7 @@ def operator(scope: Scope) -> dict:
     per_map = {}
     maps = r.map_table()
     for m in maps["map"]:
-        pos = r.positions[r.positions["map"] == m]
+        pos = _moments(r.positions[r.positions["map"] == m])
         sl = r.sightlines[r.sightlines["map"] == m]
         pu, pv = _view(m, pos["x"], pos["y"])
         area = nearest_callout(m, pos["x"], pos["y"]) if len(pos) else []
@@ -235,15 +288,19 @@ def operator(scope: Scope) -> dict:
         per_map[m] = {
             "gun_rounds": int(r.holders["map"].eq(m).sum()),
             "rounds": int(maps.loc[maps["map"] == m, "rounds"].iloc[0]),
+            # One entry per recorded moment of the holder: via = what GRID logged (shot = dealt damage, hit = took
+            # damage, cast = used an ability), what = those events in words.
             "positions": [{"at": [float(a), float(b)], "t": _r(t), "round": ri, "player": p, "agent": ag,
-                           "area": ar, "via": src}
-                          for a, b, t, ri, p, ag, ar, src in zip(pu, pv, pos["t"], _round_index(pos, rounds_index),
-                                                                 pos["player_name"], pos["agent"], area, pos["source"])],
+                           "area": ar, "via": src, "what": wh}
+                          for a, b, t, ri, p, ag, ar, src, wh in zip(pu, pv, pos["t"], _round_index(pos, rounds_index),
+                                                                     pos["player_name"], pos["agent"], area, pos["source"],
+                                                                     pos["what"])],
             "kills": [{"from": [float(a), float(b)], "to": [float(c), float(d)], "t": _r(t), "round": ri,
-                       "player": names.get(aid, "teammate"),
+                       "player": names.get(aid, _player_names().get(aid, "teammate")), "victim": _player_names().get(tid),
                        "agent": agents.get((g, rn, aid))}
-                      for a, b, c, d, t, ri, aid, g, rn in zip(au, av, tu, tv, sl["t"], _round_index(sl, rounds_index),
-                                                               sl["actor_id"], sl["game_id"], sl["round_num"])],
+                      for a, b, c, d, t, ri, aid, tid, g, rn in zip(au, av, tu, tv, sl["t"], _round_index(sl, rounds_index),
+                                                                    sl["actor_id"], sl["target_id"], sl["game_id"],
+                                                                    sl["round_num"])],
         }
     holders = r.holder_table()
     glance = []

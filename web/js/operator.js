@@ -22,7 +22,7 @@ const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 const pct = (v) => `${Math.round(v * 100)}%`;
 const MOMENT = 5; // seconds a dot stays visible in Moment mode
 // What put a dot on the map. GRID has no record of missed shots or of movement, only these three.
-const VIA = { shot: "dealt damage", hit: "took damage", cast: "used an ability" };
+const VIA = { shot: "dealt damage", hit: "took damage", cast: "used an ability" }; // fallback when details are missing
 const MIN_SAMPLE = 8;
 
 function wilson(k, n) {
@@ -140,8 +140,10 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
       el("circle", { cx: p.at[0], cy: p.at[1], r: 15, fill: timeColor(p.t), opacity: .1 }, g);
       const core = el("circle", { cx: p.at[0], cy: p.at[1], r: 4.5, fill: timeColor(p.t), stroke: COLORS.bg, "stroke-width": 1,
         "vector-effect": "non-scaling-stroke" }, g);
-      core.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) ${esc(VIA[p.via] || p.via)}
-        at ${clockLabel(p.t)}${p.area ? ` near <b>${esc(p.area)}</b>` : ""}<br><span style="color:var(--dim)">With whatever they had in hand, not necessarily the ${esc(data.gun)}.</span>`));
+      // One dot per recorded moment; a trade (a kill and a hit taken in the same tick) lists both.
+      const lines = (p.what && p.what.length ? p.what : (p.via || []).map((v) => VIA[v] || v));
+      core.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) at ${clockLabel(p.t)}${
+        p.area ? ` near <b>${esc(p.area)}</b>` : ""}<ul class="tip-lines">${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`));
       core.addEventListener("mousemove", (e) => tip.move(e));
       core.addEventListener("mouseleave", () => tip.hide());
       layer.dots.push({ g, p, shown: -1 });
@@ -153,6 +155,12 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
       el("circle", { cx: k.from[0], cy: k.from[1], r: 9, fill: "none", stroke: COLORS.atk, "stroke-width": 1.8, "vector-effect": "non-scaling-stroke" }, g);
       const x = el("path", { d: `M${k.to[0] - 7} ${k.to[1] - 7}L${k.to[0] + 7} ${k.to[1] + 7}M${k.to[0] + 7} ${k.to[1] - 7}L${k.to[0] - 7} ${k.to[1] + 7}`,
         stroke: COLORS.atk, "stroke-width": 2, "vector-effect": "non-scaling-stroke", opacity: 0 }, g);
+      const hit = el("line", { x1: k.from[0], y1: k.from[1], x2: k.to[0], y2: k.to[1], stroke: "transparent", "stroke-width": 10,
+        "vector-effect": "non-scaling-stroke", style: "cursor:crosshair" }, g); // a wider hover target than the thin line
+      hit.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(k.player)}</b>${k.agent ? ` (${esc(title(k.agent))})` : ""} killed
+        <b>${esc(k.victim || "an enemy")}</b> with the ${esc(data.gun)} at ${clockLabel(k.t)}<br><span style="color:var(--dim)">Ring: shooter · ✕: victim</span>`));
+      hit.addEventListener("mousemove", (e) => tip.move(e));
+      hit.addEventListener("mouseleave", () => tip.hide());
       layer.kills.push({ g, ln, x, k });
     }
     note(m);
