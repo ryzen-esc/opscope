@@ -40,7 +40,7 @@ BLUR_THRESHOLD = 0.35  # ...and this cut decides where the smoothed floor ends
 MIN_PART_CELLS = 120  # floor patches smaller than this (~30 m²) are dropped; wall blocks smaller are filled
 RDP_EPS_CELLS = 2.0   # simplification tolerance (1 m)
 SNAP_DEG = 13         # snap a wall to the nearest 45° step when it is this close
-GEOMETRY_VERSION = 3
+GEOMETRY_VERSION = 4
 MAPS_API = "https://valorant-api.com/v1/maps"
 ICON_PX = 1024
 
@@ -361,6 +361,43 @@ def trace_icon(rgba: np.ndarray) -> dict[str, list]:
     }
 
 
+def inside(pt, rings) -> bool:
+    """Point on the floor (even-odd over every ring, so wall blocks count as outside)."""
+    x, y = pt
+    c = False
+    for r in rings:
+        r = np.asarray(r, float)
+        x1, y1 = r[:, 0], r[:, 1]
+        x2, y2 = np.roll(x1, -1), np.roll(y1, -1)
+        cross = (y1 > y) != (y2 > y)
+        xs = (x2 - x1) * (y - y1) / np.where(cross, y2 - y1, 1) + x1
+        c ^= bool(np.count_nonzero(cross & (x < xs)) % 2)
+    return c
+
+
+def snap_to_floor(pt, rings, inset: float = 6.0) -> list[float]:
+    """Move a marker that sits on a wall or off the map onto the nearest floor, `inset` units in."""
+    p = np.asarray(pt, float)
+    if inside(p, rings):
+        return [round(float(p[0]), 1), round(float(p[1]), 1)]
+    best, best_d = p, np.inf
+    for r in rings:
+        a = np.asarray(r, float)
+        ab = np.roll(a, -1, 0) - a
+        t = np.clip(((p - a) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-9), 0, 1)
+        q = a + ab * t[:, None]
+        d = np.hypot(*(q - p).T)
+        i = int(d.argmin())
+        if d[i] < best_d:
+            best, best_d = q[i], d[i]
+    step = (best - p) / max(best_d, 1e-9)
+    for k in (1, 2, 4):  # nudge past the wall line until we're on the floor
+        q = best + step * inset * k
+        if inside(q, rings):
+            return [round(float(q[0]), 1), round(float(q[1]), 1)]
+    return [round(float(best[0]), 1), round(float(best[1]), 1)]
+
+
 def to_view(map_name: str, x, y) -> tuple[np.ndarray, np.ndarray]:
     """Game x/y -> the frame every OpScope map is drawn in: the official minimap, turned so attackers start at
     the bottom. Use this for every layer (dots, kills, habit spots, landings)."""
@@ -406,7 +443,8 @@ def map_geometry(map_name: str, refresh: bool = False) -> dict:
         "bbox": [float(allp[:, 0].min()), float(allp[:, 1].min()), float(allp[:, 0].max()), float(allp[:, 1].max())],
         "spawns": {side: pt(*xy) for side, xy in spawns(map_name).items()},
         "sites": sites_,
-        "callouts": [{"name": c["name"], "at": pt(c["x"], c["y"])} for c in callouts().get(map_name, [])],
+        # Community callout markers sometimes sit on a wall or roof; pins should land on walkable floor.
+        "callouts": [{"name": c["name"], "at": snap_to_floor(pt(c["x"], c["y"]), rings)} for c in callouts().get(map_name, [])],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(g))

@@ -81,3 +81,14 @@ def test_trace_icon_reads_floor_walls_props_and_sites():
     assert len(layers["props"]) == 1 and len(layers["site_areas"]) == 1
     site = np.array(layers["site_areas"][0])
     assert site[:, 0].min() == pytest.approx(650) and site[:, 1].max() == pytest.approx(880)
+
+
+def test_markers_on_a_wall_snap_onto_the_floor():
+    room = [[0, 0], [100, 0], [100, 100], [0, 100]]
+    pillar = [[40, 40], [60, 40], [60, 60], [40, 60]]
+    rings = [room, pillar]
+    assert G.inside([10, 10], rings) and not G.inside([50, 50], rings) and not G.inside([150, 50], rings)
+    for p in ([50, 45], [150, 50]):  # inside the pillar, and off the map to the right
+        q = G.snap_to_floor(p, rings)
+        assert G.inside(q, rings)
+    assert G.snap_to_floor([10, 10], rings) == [10, 10]

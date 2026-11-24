@@ -1,0 +1,179 @@
+/* OpScope web app. Dark tactical look: cyan = defense, red = attack, amber = pay attention. */
+:root {
+  --bg: #06080b; --bg2: #0a0e13; --panel: #0d1218; --panel2: #121a22;
+  --line: rgba(255, 255, 255, .08); --line2: rgba(255, 255, 255, .14);
+  --ink: #eef3f7; --dim: #8796a5; --faint: #4d5b69;
+  --def: #00aeef; --atk: #f2545b; --amb: #f5b43c; --grn: #4fd18b;
+  --disp: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body: Inter, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --gutter: clamp(20px, 6vw, 96px);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0 }
+html { background: var(--bg); color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; overflow-x: hidden }
+html.lenis, html.lenis body { height: auto }
+.lenis.lenis-smooth { scroll-behavior: auto !important }
+b, strong { font-weight: 600; color: #fff }
+button { font: inherit; color: inherit }
+a { color: inherit }
+.mono { font-family: var(--mono) }
+:focus-visible { outline: 2px solid var(--def); outline-offset: 3px }
+
+/* ---- top bar ------------------------------------------------------------------------------------- */
+.bar { position: fixed; inset: 0 0 auto 0; height: 60px; z-index: 50; display: flex; align-items: center; gap: 26px;
+  padding: 0 var(--gutter); background: linear-gradient(var(--bg) 35%, rgba(6, 8, 11, 0)) }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 800 20px var(--disp); letter-spacing: .16em }
+.logo b { color: var(--def); font-weight: 800 }
+.switch { display: flex; align-items: center; gap: 12px; padding: 7px 10px 7px 14px; border: 1px solid var(--line2); border-radius: 999px;
+  background: rgba(13, 18, 24, .75); backdrop-filter: blur(10px); font-size: 13px; cursor: pointer; transition: border-color .2s }
+.switch:hover { border-color: rgba(0, 174, 239, .6) }
+kbd { font: 11px var(--mono); color: var(--dim); border: 1px solid var(--line2); padding: 1px 6px; border-radius: 4px }
+.views { margin-left: auto; display: flex; gap: 24px; font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase }
+.views a { color: var(--faint); text-decoration: none; padding-bottom: 6px; position: relative; transition: color .3s }
+.views a:hover { color: var(--dim) }
+.views a.on { color: var(--ink) }
+.views a.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--def) }
+.progress { position: fixed; top: 0; left: 0; height: 2px; width: 0; background: var(--def); z-index: 60 }
+
+/* ---- shared bits ----------------------------------------------------------------------------------- */
+.kicker { font: 600 12px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--def) }
+.chip { display: inline-block; font: 600 10px var(--mono); letter-spacing: .14em; padding: 2px 7px; border: 1px solid currentColor; text-transform: uppercase }
+.chip.atk { color: var(--atk) } .chip.def { color: var(--def) } .chip.amb { color: var(--amb) }
+.reveal { opacity: 0; transform: translateY(36px); transition: opacity 1s var(--ease), transform 1s var(--ease) }
+.reveal.in { opacity: 1; transform: none }
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translate(-50%, 12px); background: var(--panel2); border: 1px solid var(--line2);
+  padding: 10px 16px; font-size: 13px; z-index: 90; opacity: 0; pointer-events: none; transition: all .3s var(--ease) }
+.toast.on { opacity: 1; transform: translate(-50%, 0) }
+
+/* ---- evidence bar ---------------------------------------------------------------------------------- */
+.evbar { --c: var(--def); position: relative; height: 10px; background: rgba(255, 255, 255, .07); border-radius: 2px; margin: 26px 0 26px }
+.evbar.plain { margin: 8px 0 }
+.evbar .band { position: absolute; top: 0; bottom: 0; background: var(--c); opacity: .38; border-radius: 2px }
+.evbar .dot { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .92) }
+.evbar .tick { position: absolute; top: -8px; bottom: -8px; width: 2px; margin-left: -1px; background: #c9d3dd }
+.evbar .lab { position: absolute; transform: translateX(-50%); white-space: nowrap; font: 11px var(--mono) }
+.evbar .lab.rate { bottom: 18px; color: var(--c); font-weight: 600 }
+.evbar .lab.base { top: 20px; color: var(--dim) }
+.evbar.atk { --c: var(--atk) }
+
+/* ---- loading / empty ----------------------------------------------------------------------------- */
+.loading { min-height: 100vh; display: grid; place-items: center; text-align: center; color: var(--dim); font: 12px var(--mono); letter-spacing: .2em }
+.loading .ret { width: 54px; height: 54px; margin: 0 auto 18px; animation: spin 2.4s linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+.setup { max-width: 760px; margin: 0 auto; padding: 140px var(--gutter) 80px }
+.setup h1 { font: 800 56px/1 var(--disp); text-transform: uppercase; margin: 14px 0 18px }
+.setup ol { margin: 18px 0 0 20px; color: var(--dim) } .setup li { margin: 10px 0 } .setup code { color: var(--def); font: 13px var(--mono) }
+
+/* ---- overview: hero ------------------------------------------------------------------------------- */
+.hero { position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 120px var(--gutter) 9vh }
+.hero .bgmap { position: absolute; right: 1vw; top: 52%; height: 94vh; width: 58vw; transform: translateY(-50%); opacity: .7;
+  animation: drift 50s ease-in-out infinite alternate }
+@keyframes drift { to { transform: translateY(-52%) rotate(-2.5deg) scale(1.04) } }
+.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 74% 50%, transparent 18%, var(--bg) 72%), linear-gradient(90deg, var(--bg) 28%, transparent 72%) }
+.hero > :not(.bgmap):not(.cue) { position: relative; z-index: 2 }
+.picks { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 34px }
+.picks span { font: 600 10px var(--mono); letter-spacing: .18em; color: var(--faint); margin-right: 6px }
+.picks button { background: rgba(13, 18, 24, .7); border: 1px solid var(--line2); padding: 6px 12px; font-size: 13px; cursor: pointer;
+  transition: border-color .2s, background .2s }
+.picks button:hover { border-color: rgba(0, 174, 239, .55) }
+.picks button.on { background: var(--def); border-color: var(--def); color: #001018; font-weight: 600 }
+.hero h1 { font: 900 clamp(84px, 15vw, 236px)/.84 var(--disp); text-transform: uppercase; letter-spacing: -.005em; margin: 16px 0 12px;
+  max-width: 14ch; overflow-wrap: anywhere }
+.hero h1 .ch { display: inline-block }
+.hero .sub { font-size: 19px; color: var(--dim); max-width: 600px }
+.stats { display: flex; gap: clamp(28px, 4.5vw, 64px); margin-top: 42px; flex-wrap: wrap }
+.stat .v { font: 800 clamp(44px, 5vw, 66px)/1 var(--disp); font-variant-numeric: tabular-nums }
+.stat .l { font: 600 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-top: 8px }
+.stat .s { font: 12px var(--mono); color: var(--faint); margin-top: 3px }
+.roster { display: flex; gap: 8px; margin-top: 30px; align-items: center; flex-wrap: wrap }
+.roster em { font: 600 11px var(--mono); letter-spacing: .16em; color: var(--faint); font-style: normal; margin-right: 8px }
+.roster span { font: 600 13px var(--mono); padding: 6px 12px; border: 1px solid var(--line2); background: rgba(13, 18, 24, .6) }
+.notes { margin-top: 18px; font-size: 13px; color: var(--faint); max-width: 760px }
+.cue { position: absolute; right: var(--gutter); bottom: 9vh; font: 600 11px var(--mono); letter-spacing: .2em; color: var(--dim);
+  display: flex; align-items: center; gap: 12px; z-index: 2 }
+.cue i { display: block; width: 1px; height: 48px; background: linear-gradient(var(--def), transparent); animation: cue 1.8s infinite }
+@keyframes cue { 0% { transform: scaleY(0); transform-origin: top } 50% { transform: scaleY(1); transform-origin: top }
+  51% { transform-origin: bottom } 100% { transform: scaleY(0); transform-origin: bottom } }
+
+/* ---- overview: chapters ------------------------------------------------------------------------------ */
+.chead { padding: 20vh var(--gutter) 6vh; max-width: 1180px }
+.chead .num { font: 600 12px var(--mono); letter-spacing: .22em; color: var(--def) }
+.chead h2 { font: 800 clamp(46px, 7vw, 104px)/.92 var(--disp); text-transform: uppercase; margin-top: 14px }
+.chead p { color: var(--dim); font-size: 19px; margin-top: 20px; max-width: 660px }
+
+.story { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .9fr); gap: 0 4vw; padding: 0 var(--gutter) }
+.stage { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center }
+.stage svg { width: 100%; height: 84vh; overflow: hidden;
+  -webkit-mask-image: radial-gradient(ellipse closest-side, #000 84%, transparent); mask-image: radial-gradient(ellipse closest-side, #000 84%, transparent) }
+.stage .cap { position: absolute; left: 0; top: 13vh; font: 600 12px var(--mono); letter-spacing: .2em; text-transform: uppercase;
+  color: var(--dim); display: flex; gap: 12px; align-items: center; z-index: 2 }
+.step { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; opacity: .16; transition: opacity .6s }
+.step.on { opacity: 1 }
+.step .n { font: 600 12px var(--mono); letter-spacing: .18em; color: var(--dim); display: flex; gap: 12px; align-items: center; text-transform: uppercase }
+.step .big { font: 900 clamp(92px, 10.5vw, 164px)/.9 var(--disp); margin: 16px 0 4px; color: var(--def); font-variant-numeric: tabular-nums }
+.step .big.atk { color: var(--atk) }
+.step .of { font: 15px var(--mono) }
+.step .peer { font: 12px var(--mono); color: var(--faint); margin-top: 4px }
+.step .cat { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-top: 26px }
+.step h3 { font: 700 27px/1.22 var(--body); letter-spacing: -.01em; margin: 8px 0 10px; max-width: 540px }
+.step h3 b { color: inherit }
+.step p { color: var(--dim); max-width: 520px }
+.step .evwrap { max-width: 520px; margin-top: 8px }
+.step .range { font: 12px var(--mono); color: var(--faint) }
+.step .departed { color: var(--amb); font-size: 13px; margin-top: 10px }
+
+.rest { padding: 0 var(--gutter) 8vh }
+.row { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(180px, 300px) 150px; gap: 28px; align-items: center;
+  padding: 20px 12px 20px 0; border-top: 1px solid var(--line); text-decoration: none; transition: background .25s, padding .25s var(--ease) }
+.row:hover { background: rgba(255, 255, 255, .025); padding-left: 10px }
+.row .i { font: 800 28px var(--disp); color: var(--faint) }
+.row .h { font-weight: 600; font-size: 17px } .row .h b { color: inherit }
+.row .d { color: var(--dim); font-size: 14px; margin-top: 4px }
+.row .m { font: 12px var(--mono); color: var(--dim); text-align: right; display: flex; gap: 10px; justify-content: flex-end; align-items: center }
+
+.cta { padding: 14vh var(--gutter) 18vh; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;
+  border-top: 1px solid var(--line); flex-wrap: wrap }
+.cta h2 { font: 800 clamp(44px, 6vw, 92px)/.92 var(--disp); text-transform: uppercase }
+.cta p { color: var(--dim); max-width: 520px; margin-top: 16px }
+.btn { display: inline-flex; align-items: center; gap: 12px; padding: 16px 24px; background: var(--def); color: #001018; font-weight: 700;
+  text-decoration: none; border: 0; cursor: pointer; transition: transform .2s var(--ease), box-shadow .2s }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0, 174, 239, .25) }
+.foot { padding: 0 var(--gutter) 40px; font: 11px var(--mono); color: var(--faint); letter-spacing: .06em }
+
+.soon { min-height: 100vh; display: grid; place-items: center; text-align: center; padding: 0 var(--gutter) }
+.soon h2 { font: 800 64px/1 var(--disp); text-transform: uppercase; margin: 14px 0 }
+.soon p { color: var(--dim) }
+
+/* ---- team palette ---------------------------------------------------------------------------------- */
+.palette { position: fixed; inset: 0; z-index: 80; background: rgba(3, 5, 8, .72); backdrop-filter: blur(10px);
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 15vh }
+.palette[hidden] { display: none }
+.palette-box { width: min(580px, calc(100vw - 32px)); background: var(--panel); border: 1px solid var(--line2);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, .6); animation: pop .25s var(--ease) }
+@keyframes pop { from { transform: translateY(12px) scale(.98); opacity: 0 } }
+.palette input { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 18px 20px; color: var(--ink);
+  font: 16px var(--body); outline: none }
+.palette ul { list-style: none; max-height: 360px; overflow: auto }
+.palette li { padding: 11px 20px; font-size: 14px; display: flex; justify-content: space-between; gap: 12px; cursor: pointer }
+.palette li[aria-selected="true"] { background: rgba(0, 174, 239, .12) }
+.palette li small { color: var(--faint); font: 11px var(--mono); letter-spacing: .08em }
+.palette-foot { display: flex; gap: 18px; padding: 10px 20px; border-top: 1px solid var(--line); font: 11px var(--mono); color: var(--faint) }
+
+@media (max-width: 900px) {
+  .story { grid-template-columns: 1fr }
+  .stage { position: sticky; top: 60px; height: 46vh; z-index: 1; background: var(--bg) }
+  .stage svg { height: 42vh }
+  .step { min-height: 80vh }
+  .row { grid-template-columns: 40px 1fr; } .row .eb, .row .m { grid-column: 2 }
+  .row .m { justify-content: flex-start }
+  .views { display: none }
+  .hero .bgmap { width: 120vw; opacity: .35 }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important }
+}
