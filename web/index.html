@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpScope</title>
+<style>
+  body { background:#0b0f14; color:#e9edf1; font:15px/1.6 system-ui, sans-serif; margin:0; padding:48px }
+  code { color:#00aeef }
+  li { margin:6px 0 }
+</style>
+</head>
+<body>
+<h1>OpScope</h1>
+<p id="status">Loading…</p>
+<script>
+// Placeholder until the front end lands: shows whether the API and the local data cache are ready.
+fetch("/api/meta").then(async (r) => {
+  const d = await r.json(), el = document.getElementById("status");
+  if (r.status === 503) {
+    el.innerHTML = "<b>OpScope needs the GRID data and a local cache first.</b><ol>" +
+      d.setup.map((s) => `<li>${s.replace(/(uv run [^\s]+(?: [^\s]+)*|git clone [^\s]+(?: [^\s]+)*)/, "<code>$1</code>")}</li>`).join("") + "</ol>";
+  } else {
+    el.textContent = `API ready: ${d.summary.series} series, ${d.summary.maps} maps, ${d.summary.rounds} rounds.`;
+  }
+});
+</script>
+</body>
+</html>
