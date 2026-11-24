@@ -5,9 +5,11 @@ Eli's entry in the **Cloud9 x JetBrains "Sky's The Limit" Hackathon 2026** (Devp
 **Deadline: Jan 12, 2027, 11:00am PT** (aim to submit by Jan 9). Judging Jan 27–Feb 3, 2027.
 Public repo: **https://github.com/ryzen-esc/opscope**.
 
-## Where things stand (checkpoint: Nov 23, 2026, ~midnight)
-- **Redesign in progress: a new web app replaces the Streamlit UI.** Analytics and numbers are unchanged. 56 tests pass
-  (`uv run pytest`). Everything up to the Nov 23 checkpoint is pushed to GitHub; ask Eli before pushing anything new.
+## Where things stand (checkpoint: Nov 24, 2026)
+- **Redesign in progress: a new web app replaces the Streamlit UI.** Analytics and numbers are unchanged, except one
+  approved fix (Nov 24): `stats.wilson` is exact at k = 0 / k = n, which removed fake "0 of n vs typical 0%" findings
+  (C9 unaffected; doc figures unchanged). 79 tests pass (`uv run pytest`). Everything up to the Nov 23 checkpoint is
+  pushed; the Nov 24 review fixes (every commit after `ac0cce2`) are local only. Ask Eli before pushing anything new.
 - **Plan** (approved by Eli; full text in `/Users/eli/.claude/plans/a-look-good-as-expressive-riddle-of-d17ce326-734c-4f59-8f9c-47ddc1d32f21.md`):
   1. ✅ Accurate maps (official minimap frame + traced minimaps). 2. ✅ JSON API + local server. 3. ✅ Overview story.
   4. ✅ Dashboard + Briefing tab. 5. ✅ Operator tab + round clock. 6. ✅ Utility tab.
@@ -40,7 +42,9 @@ config `opscope-web` in `/Users/eli/hackathon/.claude/launch.json`. Plain HTML/C
     evidence card with the game-plan advice (self-scout: tip only) and a link to the Operator/Utility tab with filters set.
     Findings with no single spot say so. Bottom strip: plant share per site vs the **typical team** (same as the findings).
   - **Operator** (`operator.js`): weapon switch, rate vs typical, rate by map (click to switch), who holds it, first-shot
-    timing, full-buy wins with/without (95% ranges), survived. Map + **round clock** (`timeline.js`: play/drag/←→, 1×/2×/4×,
+    timing, full-buy wins with/without (95% ranges), survived (per distinct gun round), early setup on the selected map
+    (`maps[m].aggression`: percentile = share of other teams' setups the median is further forward than, flipped for
+    attack since aggression runs 0 = defender spawn to 1 = attacker spawn; None on both sides or < 8 setups). Map + **round clock** (`timeline.js`: play/drag/←→, 1×/2×/4×,
     Build up / Moment = last 5 s). A **dot is one recorded moment of the holder**: they dealt damage, took damage or used
     an ability (GRID has no missed shots or movement), with whatever was in hand; same-tick events are merged and listed
     (a trade shows both). Kill lines = kills with the gun (ring = shooter, ✕ = victim). The map **overlays every round by
@@ -99,7 +103,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 - `METHODOLOGY.md`: full method + validation + limits. `views/about.py` is the in-app short version.
 - `AI_SHOWCASE.md`: the AI workflow story, written in Eli's voice. `notes/AI_WORKFLOW_LOG.md`: add a row for each notable AI step.
 - `notes/`: `PLAN.md` (original roadmap M1–M6), `DEVPOST.md`, `DEMO_SCRIPT.md`, `SUBMISSION_CHECKLIST.md`.
-- **Figures quoted in the docs** (re-pull them if the data or method changes): C9 Op on Lotus defense 2 of 134 vs typical VCT 2025 team 8%; Haven 30 of 80 vs 19%; OXY 93 of 96 Op rounds; NRG Odin on Lotus defense 47 of 117 vs 11%; neT turret near Mid Boiler 25 of 26 vs typical Killjoy 64%; Viper wall typical = 100% (other 21 VCT 2025 Vipers); landing miss 21.3 m → 6.9 m on 171 held-out series; 13,255 rollbacks; 56 tests.
+- **Figures quoted in the docs** (re-pull them if the data or method changes): C9 Op on Lotus defense 2 of 134 vs typical VCT 2025 team 8%; Haven 30 of 80 vs 19%; OXY 93 of 96 Op rounds; NRG Odin on Lotus defense 47 of 117 vs 11%; neT turret near Mid Boiler 25 of 26 vs typical Killjoy 64%; Viper wall typical = 100% (other 21 VCT 2025 Vipers); landing miss 21.3 m → 6.9 m on 171 held-out series; 13,255 rollbacks; 56 tests (now 79: update the docs in step 8).
 
 ## Data (GRID): hard rules
 - Lives at `$STL_DATA_DIR` = `/Users/eli/hackathon/stl-hackathon-2026-grid-starter` (sparse: val, val-ability-supplements, meta), outside the repo. Read its `AGENTS.md`/README for the format.
@@ -123,7 +127,9 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
   - `landing.py`: validated landing model. `roster.py`: rosters per event and departed flags. `stats.py`: Wilson, `typical_rate`.
 - **Comparison rule:** a team is compared with the **typical other team** (median of per-team rates, 16+ rounds, at least 4 teams, else pooled) in the **same tier and season**. Multi-season teams are compared season by season, weighted by rounds. The habit baseline = median same-spot share of **other teams'** players, following the Patch/Event filters.
 - `zones.py`: bomb sites (k-means on 28,952 plants) + `nearest_callout` (a site centre within 8 m wins, else the nearest callout within 25 m). valorant-api.com uses the **same x/y as GRID**.
-- **New web app (redesign in progress, Nov 23):** `present.py` builds each page's JSON (report, operator, utility, meta, team filters; positions/kills/casts carry view-frame `at`, time `t` (negative = buy phase) and a round index for the timeline). `api.py` serves it (Starlette, gzip; list filters repeat the param, `side` = attacker/defender/both; missing cache → 503 with setup steps). `server.py`: `uv run opscope` serves `web/` + the API on 127.0.0.1:8000. Preview config `opscope-web`. Plan: overview story → dashboard with a scrubbable timeline; Streamlit is retired once the new site covers everything.
+- **New web app (redesign in progress, Nov 23):** `present.py` builds each page's JSON (report, operator, utility, meta, team filters; positions/kills/casts carry view-frame `at`, time `t` (negative = buy phase) and a round index for the timeline). `api.py` serves it (Starlette, gzip; list filters repeat the param, `side` = attacker/defender/both, default defender; missing cache → 503 with setup steps; `TrustedHostMiddleware`
+answers only Host 127.0.0.1/localhost, against DNS rebinding, so tests use `base_url="http://127.0.0.1"`). Plan items
+carry `index` = their finding's position in `insights` (findings can share map/side/category/k/n). `server.py`: `uv run opscope` serves `web/` + the API on 127.0.0.1:8000. Preview config `opscope-web`. Plan: overview story → dashboard with a scrubbable timeline; Streamlit is retired once the new site covers everything.
 - `geometry.py`: the official minimap frame (`to_minimap`, `to_view`), traced minimap layers (`map_geometry`: floor rings, props, site zones, spawns, sites, callouts) with a data-drawn fallback. `maps.py`: old data-drawn backdrop (Streamlit), spawns, aggression. `ui/`: minimap layers, cards, sidebar filters.
 - **Positions only exist at events** (dealing damage, taking damage, ability casts, plants; GRID has no missed shots or movement), ±1–4 m. Always state coverage ("seen in k of n rounds").
 
