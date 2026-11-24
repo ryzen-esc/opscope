@@ -162,6 +162,18 @@ def _plants(team_id: str, map_name: str, f: Scope, items: list[Insight]) -> dict
             "tendencies": sum(1 for i in items if i.map == map_name)}
 
 
+def _position(ins: Insight, items: list[Insight]) -> int:
+    """Where a plan item's finding sits in the full list, so the front end can link the exact one.
+
+    Different findings can share map, side, category and counts, so match the object itself
+    (game_plan hands back the same Insight objects); fall back to equality, then -1 (no link).
+    """
+    j = next((j for j, x in enumerate(items) if x is ins), None)
+    if j is None:
+        j = next((j for j, x in enumerate(items) if x == ins), -1)
+    return j
+
+
 @lru_cache(maxsize=32)
 def report(scope: Scope) -> dict:
     """The scouting report: dossier header, game plan, every tendency, map pool and per-map plants."""
@@ -192,7 +204,8 @@ def report(scope: Scope) -> dict:
                    "def_won": int(pool["def_won"].sum()), "def_n": int(pool["def_n"].sum()),
                    "most_played": pool.iloc[0]["map"], "most_played_games": int(pool.iloc[0]["games"])},
         "plan_title": "Habits most worth varying" if self_scout else f"Things to know about {team_name(tid)}",
-        "plan": [{"headline": s.headline, "detail": s.detail, "phase": s.phase, "evidence": insight_json(s.evidence)}
+        "plan": [{"headline": s.headline, "detail": s.detail, "phase": s.phase, "evidence": insight_json(s.evidence),
+                  "index": _position(s.evidence, items)}
                  for s in plan],
         "insights": [insight_json(i) for i in items],
         "pool": [{k: (int(v) if k != "map" else v) for k, v in row.items()} for row in pool.to_dict("records")],

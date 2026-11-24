@@ -202,7 +202,7 @@ export async function renderOverview(app, { meta, team, report: rep, go, setTeam
     const ev = p.evidence;
     const row = document.createElement("a");
     row.className = "row reveal";
-    const idx = rep.insights.findIndex((x) => x.map === ev.map && x.side === ev.side && x.category === ev.category && x.k === ev.k && x.n === ev.n);
+    const idx = p.index ?? -1;  // the finding's exact position in rep.insights (-1 = none)
     row.href = `?view=dashboard&team=${encodeURIComponent(team)}&sel=${idx}`;
     row.dataset.go = "dashboard";
     row.dataset.sel = idx;

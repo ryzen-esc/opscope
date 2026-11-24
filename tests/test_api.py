@@ -101,3 +101,14 @@ def test_every_finding_is_clear_of_the_typical_team(real):
     for team in ("79", "96", "97"):
         for ins in real.get(f"/api/report?team={team}").json()["insights"]:
             assert ins["base"] < ins["lo"] or ins["base"] > ins["hi"], (team, ins["k"], ins["n"], ins["base"])
+
+
+def test_every_plan_item_links_its_own_finding(real):
+    # Findings can share map, side, category, k and n (Operator and Odin both 0 of 44, two abilities of one
+    # player); the plan carries the exact position so the PLAN tag and advice land on the right card.
+    for team in ("79", "96", "97"):
+        rep = real.get(f"/api/report?team={team}").json()
+        for p in rep["plan"]:
+            assert 0 <= p["index"] < len(rep["insights"]), (team, p["headline"])
+            assert rep["insights"][p["index"]] == p["evidence"], (team, p["headline"])
+        assert len({p["index"] for p in rep["plan"]}) == len(rep["plan"])

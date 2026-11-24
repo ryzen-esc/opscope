@@ -73,3 +73,16 @@ def test_suggestions_name_the_comparison_group():
     i = ins("Attack", side="attacker", site="B site")
     i.peers = "other VCT 2025 teams"
     assert "other VCT 2025 teams: 20%" in counter(i).detail
+
+
+def test_plan_items_point_at_their_own_finding_when_counts_match():
+    # Two habits of one player on the same map and side, both 12 of 20: equal on everything the front end used
+    # to match plan items by (map, side, category, k, n), so the later one's PLAN tag landed on the first.
+    from opscope.present import _position
+    shear = ins("Utility", player="kiNgg", ability="Shear", area="A Main", score=2.0)
+    vine = ins("Utility", player="kiNgg", ability="Razorvine", area="Mid", score=1.0)
+    gun = ins("Operator", weapon="odin", label="Odin", direction="more", score=0.5)
+    items = [vine, shear, gun]
+    plan = game_plan(items, self_scout=False)
+    assert [_position(s.evidence, items) for s in plan] == [0, 1, 2]
+    assert _position(ins("Attack", site="B site"), items) == -1

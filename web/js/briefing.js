@@ -20,16 +20,15 @@ function adviceText(advice, ev, selfScout) {
   return selfScout ? esc(tip) : `<b>${advice.headline}.</b> ${esc(tip)}`;
 }
 
-/** Same finding? (the game plan carries its evidence; match it back to the full list) */
-const same = (a, b) => a.map === b.map && a.side === b.side && a.category === b.category && a.k === b.k && a.n === b.n;
-
 export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterBanner = "" }) {
   const disposers = [];
   const cats = [["All", "All"], ["Operator", "Gun choice"], ["Utility", "Utility habit"], ["Attack", "Plant site"]];
   const st = { cat: params.get("cat") || "All", sel: params.has("sel") ? +params.get("sel") : null,
     map: params.get("map") || "", side: params.get("side") || "both" };
+  // Each plan item names its finding's exact position in the list (several findings can share map, side and counts).
+  const planAt = new Map(rep.plan.map((p, j) => [p.index, j]).filter(([i]) => i >= 0));
   const items = rep.insights.map((ev, i) => {
-    const plan = rep.plan.findIndex((p) => same(p.evidence, ev));
+    const plan = planAt.has(i) ? planAt.get(i) : -1;
     return { ev, i, advice: plan >= 0 ? rep.plan[plan] : null, plan: plan >= 0 ? plan + 1 : null };
   });
   const rank = (i) => `#${i + 1}`;
