@@ -247,7 +247,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
     showMap(name || items[st.sel ?? -1]?.ev.map || rep.record.most_played).then(drawLayers);
   });
   ui.onSide((side) => { st.side = side; setParams({ side: side === "both" ? null : side }); renderCats(); renderList(); drawLayers(); });
-  ui.zoom((f) => map?.focus(st.sel != null && items[st.sel] ? findingAt(map.geo, items[st.sel].ev) || null : null, f, 500));
+  ui.zoom((f) => map?.zoomBy(f));
 
   const onKey = (e) => {
     if (e.target.closest?.("input, textarea") || !document.getElementById("palette").hidden) return;

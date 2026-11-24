@@ -72,9 +72,9 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
       _map: null, _side: null, _zoom: null,
       onMap(fn) { this._map = fn; }, onSide(fn) { this._side = fn; }, zoom(fn) { this._zoom = fn; },
     };
-    let zoomLevel = 1;
-    $("#zin").addEventListener("click", () => { zoomLevel = Math.min(4, zoomLevel * 1.4); ui._zoom?.(zoomLevel); });
-    $("#zout").addEventListener("click", () => { zoomLevel = Math.max(1, zoomLevel / 1.4); ui._zoom?.(zoomLevel); });
+    // The zoom level lives in each tab's map (map.zoomBy), so it carries on from wherever the camera flew.
+    $("#zin").addEventListener("click", () => ui._zoom?.(1.4));
+    $("#zout").addEventListener("click", () => ui._zoom?.(1 / 1.4));
 
     // ---- map chips: maps this team played, with how many tendencies each has ----
     const pool = rep.pool || [], insights = rep.insights || []; // an empty report (no games match the filters) has neither

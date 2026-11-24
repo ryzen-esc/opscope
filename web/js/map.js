@@ -17,7 +17,8 @@ const sideOf = (s) => (s === "attacker" ? "atk" : "def");
 
 /**
  * Draw a map into `svg`. opts: {floor, wall, wallPx, glow, spawns, sites, siteAreas, props, pad}.
- * Returns an object with the layers plus drawIn(ms, delay), focus(at, zoom, ms), pulse(...), highlightSite(name).
+ * Returns an object with the layers plus drawIn(ms, delay), focus(at, zoom, ms), zoomBy(factor), pulse(...),
+ * highlightSite(name).
  */
 export function drawMap(svg, geo, opts = {}) {
   const o = { floor: "#101b27", wall: "#5fb4e6", wallPx: 1.5, glow: true, spawns: true, sites: true, siteAreas: true,
@@ -75,17 +76,22 @@ export function drawMap(svg, geo, opts = {}) {
   }
 
   let now = base.slice(), raf = 0;
-  /** Animate the camera to centre `at` at `zoom` (1 = whole map); null resets. */
-  function focus(at, zoom = 1, ms = 1200, { shift = 0 } = {}) {
-    let target = base.slice();
-    if (at && zoom > 1) {
-      // Centre on the spot (moved left by `shift` of the view, to clear a panel on the right), but keep the camera
-      // inside the map so an edge spot never shows empty space.
-      const w = base[2] / zoom, h = base[3] / zoom;
-      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-      const cx = at[0] + shift * w;
-      target = [clamp(cx - w / 2, base[0], base[0] + base[2] - w), clamp(at[1] - h / 2, base[1], base[1] + base[3] - h), w, h];
-    }
+  // Where the camera is aimed (the last target, not an in-between frame), so the zoom buttons carry on from it.
+  // `at` stays when zooming back out to 1, so "+" returns to the same spot; a fresh drawMap starts at 1.
+  let cam = { at: null, zoom: 1, shift: 0 };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  /** The viewBox that centres `at` at `zoom`, kept inside the map. */
+  function frame(at, zoom, shift) {
+    if (!at || zoom <= 1) return base.slice();
+    // Centre on the spot (moved left by `shift` of the view, to clear a panel on the right), but keep the camera
+    // inside the map so an edge spot never shows empty space.
+    const w = base[2] / zoom, h = base[3] / zoom;
+    const cx = at[0] + shift * w;
+    return [clamp(cx - w / 2, base[0], base[0] + base[2] - w), clamp(at[1] - h / 2, base[1], base[1] + base[3] - h), w, h];
+  }
+
+  function fly(target, ms) {
     cancelAnimationFrame(raf);
     if (reduced || ms <= 0) { now = target; svg.setAttribute("viewBox", now.join(" ")); return; }
     const from = now.slice(), t0 = performance.now();
@@ -96,6 +102,21 @@ export function drawMap(svg, geo, opts = {}) {
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
+  }
+
+  /** Animate the camera to centre `at` at `zoom` (1 = whole map); null resets. */
+  function focus(at, zoom = 1, ms = 1200, { shift = 0 } = {}) {
+    cam = at && zoom > 1 ? { at, zoom, shift } : { at: null, zoom: 1, shift: 0 };
+    fly(frame(cam.at, cam.zoom, cam.shift), ms);
+  }
+
+  /** Zoom by `factor` from the current camera, about the spot it is aimed at (else the map centre), within 1x to 4x. */
+  function zoomBy(factor, ms = 400) {
+    let zoom = clamp(cam.zoom * factor, 1, 4);
+    if (zoom < 1.01) zoom = 1; // 1.4 x 1/1.4 is not exactly 1
+    if (zoom === cam.zoom) return;
+    cam = { ...cam, zoom, at: cam.at || [base[0] + base[2] / 2, base[1] + base[3] / 2] };
+    fly(frame(cam.at, cam.zoom, cam.shift), ms);
   }
 
   /** A pulsing ring at `at` with an optional label. */
@@ -134,7 +155,7 @@ export function drawMap(svg, geo, opts = {}) {
     }
   }
 
-  return { svg, geo, layers, floor, detail, walls, wallPaths, drawIn, focus, pulse, highlightSite, base };
+  return { svg, geo, layers, floor, detail, walls, wallPaths, drawIn, focus, zoomBy, pulse, highlightSite, base };
 }
 
 /** Where a finding sits on the map: its own spot, else the named area (callout or site), else null. */

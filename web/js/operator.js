@@ -352,7 +352,7 @@ export function renderOperator(ui, { team, filters, params, setParams, tip, filt
     pickMap(name);
   });
   ui.onSide((side) => { st.side = side; setParams({ side }); load(); });
-  ui.zoom((f) => map?.focus(f > 1 ? [(map.base[0] + map.base[2] / 2), (map.base[1] + map.base[3] / 2)] : null, f, 400));
+  ui.zoom((f) => map?.zoomBy(f));
 
   load();
   return () => {
