@@ -102,6 +102,7 @@ Judging (equal weight): technical implementation (incl. depth of JetBrains tool 
 
 ## Gotchas
 - `df.map` is the DataFrame method: always write `df["map"]`.
+- Web front end (`web/css/app.css`): every class is global. Names already used for page-level layout (`.bar` = top nav, `.soon` = full-screen placeholder, `.story` = overview scroll layout, `.stage`, `.step`, `.row`) have clashed three times with small components: grep the CSS before naming a class.
 - Empty pandas frames: build boolean masks with an explicit `dtype=bool`.
 - Streamlit multiselects keep stale values: key them by their context. `use_container_width` is deprecated; use `width="stretch"`.
 - Library code under `src/` isn't hot-reloaded by Streamlit: restart the preview server after changing it.

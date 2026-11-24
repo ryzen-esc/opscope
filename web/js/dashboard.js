@@ -151,7 +151,7 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
   });
 
   const onKey = (e) => {
-    if (e.target.closest("input, textarea") || !document.getElementById("palette").hidden || e.metaKey || e.ctrlKey) return;
+    if (e.target.closest?.("input, textarea") || !document.getElementById("palette").hidden || e.metaKey || e.ctrlKey) return;
     const i = ["1", "2", "3", "4"].indexOf(e.key);
     if (i >= 0) { setTabUI(TABS[i][0]); showTab(TABS[i][0]); }
   };

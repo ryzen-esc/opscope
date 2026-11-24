@@ -347,9 +347,26 @@ def operator(scope: Scope) -> dict:
         "by_map": [{"map": m, "k": int(k), "n": int(n)} for m, k, n in zip(maps["map"], maps["gun_rounds"], maps["rounds"])],
         "glance": glance,
         "aggression": aggr if aggr and aggr.get("median") is not None and aggr["n"] >= MIN_SAMPLE else None,
-        "rounds_indexed": len(rounds_index),
+        "rounds": _round_info(r, rounds_index),
         "maps": per_map,
     }
+
+
+def _round_info(r, rounds_index: dict) -> list[dict]:
+    """Who, against whom, when and how it ended, for every round the payload's dots and kills come from (list
+    position = the `round` index used on positions and kills)."""
+    tr = r.rounds.set_index(["game_id", "round_num"])
+    hold = r.holders.drop_duplicates(["game_id", "round_num"]).set_index(["game_id", "round_num"])
+    out = [None] * len(rounds_index)
+    for (g, rn), i in rounds_index.items():
+        row = tr.loc[(g, rn)] if (g, rn) in tr.index else None
+        h = hold.loc[(g, rn)] if (g, rn) in hold.index else None
+        out[i] = {"game": g, "round_num": int(rn), "map": None if row is None else row["map"],
+                  "date": None if row is None else str(row["started_at"])[:10],
+                  "opponent": None if row is None else team_name(row["opp_id"]),
+                  "won": None if row is None else bool(row["won"]),
+                  "holder": None if h is None else h["player_name"], "agent": None if h is None else h["agent"]}
+    return out
 
 
 # ---- Utility profiler ----------------------------------------------------------------------------------

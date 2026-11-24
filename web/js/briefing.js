@@ -244,7 +244,7 @@ export function renderBriefing(ui, { rep, params, setParams, goTab, tip, filterB
   ui.zoom((f) => map?.focus(st.sel != null ? findingAt(map.geo, items[st.sel].ev) || null : null, f, 500));
 
   const onKey = (e) => {
-    if (e.target.closest("input, textarea") || !document.getElementById("palette").hidden) return;
+    if (e.target.closest?.("input, textarea") || !document.getElementById("palette").hidden) return;
     const vis = visible().map((x) => x.i);
     if (!vis.length) return;
     const pos = vis.indexOf(st.sel);

@@ -85,6 +85,8 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
     assert {"at", "t", "round", "player", "area", "via", "what"} <= set(pos)
     assert all(p["what"] for p in op["maps"]["haven"]["positions"])  # every dot says what happened
     assert all(k["victim"] for k in op["maps"]["haven"]["kills"])
+    info = op["rounds"][pos["round"]]  # every dot can say which round it came from
+    assert info["map"] == "haven" and info["opponent"] and info["date"] and info["round_num"] >= 1
 
     ut = real.get("/api/utility?team=79&side=defender&classes=trap").json()
     lot = ut["maps"]["lotus"]

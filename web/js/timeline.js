@@ -89,7 +89,7 @@ export function createTimeline(host, opts) {
 
   // Global keys: space plays, ← → step a second (when nothing else has focus).
   const onKey = (e) => {
-    if (e.target.closest("input, textarea, button, [role=slider]") || !document.getElementById("palette").hidden) return;
+    if (e.target.closest?.("input, textarea, button, [role=slider]") || !document.getElementById("palette").hidden) return;
     if (e.key === " ") { e.preventDefault(); setPlaying(!playing); }
     else if (e.key === "ArrowRight") { e.preventDefault(); setPlaying(false); set(Math.floor(t) + 1); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); setPlaying(false); set(Math.ceil(t) - 1); }

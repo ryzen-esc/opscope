@@ -34,7 +34,7 @@ function wilson(k, n) {
 export function renderOperator(ui, { team, filters, params, setParams, tip }) {
   const st = { weapon: params.get("weapon") || "operator", side: params.get("side") || "defender", map: params.get("map") || "" };
   if (st.side === "both" && !params.get("side")) st.side = "defender";
-  let data = null, map = null, tl = null, layer = null, token = 0, alive = true;
+  let data = null, map = null, tl = null, layer = null, token = 0, alive = true, order = [], rank = new Map();
   ui.setSide(st.side);
 
   async function load() {
@@ -134,7 +134,15 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     ui.legend.innerHTML = `<span style="color:var(--ink)" title="The holder dealt damage, took damage or used an ability: the only moments GRID records a position.">Dot = damage dealt / taken or ability, at</span>`
       + TIME.map((b) => `<span><i style="--c:${b.color}"></i>${b.label}</span>`).join("")
       + `<span><i style="--c:transparent;border:2px solid ${COLORS.atk}"></i>${esc(data.gun)} kill → ✕</span>`;
-    layer = { dots: [], kills: [] };
+    layer = { dots: [], kills: [], path: el("polyline", { fill: "none", stroke: "#fff", "stroke-opacity": .55, "stroke-width": 1.3,
+      "stroke-dasharray": "4 4", "vector-effect": "non-scaling-stroke", points: "" }, map.layers.under) };
+    // The rounds behind this map's dots, oldest first: "Round 3 of 6" means the third of those.
+    order = [...new Set([...m.positions.map((p) => p.round), ...m.kills.map((k) => k.round)])].sort((a, b) => {
+      const ra = data.rounds[a], rb = data.rounds[b];
+      return (ra.date || "").localeCompare(rb.date || "") || ra.game.localeCompare(rb.game) || ra.round_num - rb.round_num;
+    });
+    rank = new Map(order.map((r, i) => [r, i + 1]));
+    st.round = null;
     for (const p of m.positions) {
       const g = el("g", { opacity: 0, class: "dot" }, map.layers.data);
       el("circle", { cx: p.at[0], cy: p.at[1], r: 15, fill: timeColor(p.t), opacity: .1 }, g);
@@ -142,28 +150,40 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
         "vector-effect": "non-scaling-stroke" }, g);
       // One dot per recorded moment; a trade (a kill and a hit taken in the same tick) lists both.
       const lines = (p.what && p.what.length ? p.what : (p.via || []).map((v) => VIA[v] || v));
-      core.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) at ${clockLabel(p.t)}${
-        p.area ? ` near <b>${esc(p.area)}</b>` : ""}<ul class="tip-lines">${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>`));
+      core.addEventListener("mouseenter", (e) => {
+        tip.show(e, `<b>${esc(p.player)}</b> (${esc(title(p.agent))}) at ${clockLabel(p.t)}${p.area ? ` near <b>${esc(p.area)}</b>` : ""}
+          <ul class="tip-lines">${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+          <div class="tip-round">${esc(roundLabel(p.round))}</div>${st.round == null ? `<div class="tip-hint">Click to watch this round</div>` : ""}`);
+        if (st.round == null) highlight(p.round);
+      });
       core.addEventListener("mousemove", (e) => tip.move(e));
-      core.addEventListener("mouseleave", () => tip.hide());
+      core.addEventListener("mouseleave", () => { tip.hide(); if (st.round == null) highlight(null); });
+      core.addEventListener("click", () => watchRound(p.round));
       layer.dots.push({ g, p, shown: -1 });
     }
     for (const k of m.kills) {
-      const g = el("g", { opacity: 0 }, map.layers.top);
+      const g = el("g", { opacity: 0, class: "kill" }, map.layers.top);
       const ln = el("line", { x1: k.from[0], y1: k.from[1], x2: k.to[0], y2: k.to[1], stroke: COLORS.atk, "stroke-width": 1.6,
         "vector-effect": "non-scaling-stroke", pathLength: 1, "stroke-dasharray": "1 1", "stroke-dashoffset": 1 }, g);
       el("circle", { cx: k.from[0], cy: k.from[1], r: 9, fill: "none", stroke: COLORS.atk, "stroke-width": 1.8, "vector-effect": "non-scaling-stroke" }, g);
       const x = el("path", { d: `M${k.to[0] - 7} ${k.to[1] - 7}L${k.to[0] + 7} ${k.to[1] + 7}M${k.to[0] + 7} ${k.to[1] - 7}L${k.to[0] - 7} ${k.to[1] + 7}`,
         stroke: COLORS.atk, "stroke-width": 2, "vector-effect": "non-scaling-stroke", opacity: 0 }, g);
       const hit = el("line", { x1: k.from[0], y1: k.from[1], x2: k.to[0], y2: k.to[1], stroke: "transparent", "stroke-width": 10,
-        "vector-effect": "non-scaling-stroke", style: "cursor:crosshair" }, g); // a wider hover target than the thin line
-      hit.addEventListener("mouseenter", (e) => tip.show(e, `<b>${esc(k.player)}</b>${k.agent ? ` (${esc(title(k.agent))})` : ""} killed
-        <b>${esc(k.victim || "an enemy")}</b> with the ${esc(data.gun)} at ${clockLabel(k.t)}<br><span style="color:var(--dim)">Ring: shooter · ✕: victim</span>`));
+        "vector-effect": "non-scaling-stroke", style: "cursor:pointer" }, g); // a wider hover target than the thin line
+      hit.addEventListener("mouseenter", (e) => {
+        tip.show(e, `<b>${esc(k.player)}</b>${k.agent ? ` (${esc(title(k.agent))})` : ""} killed <b>${esc(k.victim || "an enemy")}</b>
+          with the ${esc(data.gun)} at ${clockLabel(k.t)}<br><span style="color:var(--dim)">Ring: shooter · ✕: victim</span>
+          <div class="tip-round">${esc(roundLabel(k.round))}</div>`);
+        if (st.round == null) highlight(k.round);
+      });
       hit.addEventListener("mousemove", (e) => tip.move(e));
-      hit.addEventListener("mouseleave", () => tip.hide());
+      hit.addEventListener("mouseleave", () => { tip.hide(); if (st.round == null) highlight(null); });
+      hit.addEventListener("click", () => watchRound(k.round));
       layer.kills.push({ g, ln, x, k });
     }
     note(m);
+    ui.live.innerHTML = `<div class="rnav" id="rnav"></div><div class="lbody" id="lbody"></div>`;
+    renderNav();
     // The clock: up to 100 s, or the latest moment if the gun is still out later.
     const tmax = Math.min(150, Math.max(100, Math.ceil(Math.max(0, ...m.positions.map((p) => p.t), ...m.kills.map((k) => k.t)) / 10) * 10));
     tl?.destroy();
@@ -171,6 +191,75 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
       ticks: m.kills.map((k) => k.t), onTime: draw });
     if (m.positions.length || m.kills.length) setTimeout(() => alive && tl?.play(), 900);
   }
+
+  // ---- rounds: label, highlight on hover, watch one ----
+  function roundLabel(i) {
+    const r = data.rounds[i];
+    if (!r) return "";
+    return `Round ${rank.get(i) ?? "?"} of ${order.length} here · map round ${r.round_num} vs ${r.opponent}, ${r.date}${
+      r.won == null ? "" : r.won ? " · won" : " · lost"}`;
+  }
+
+  /** Dim everything but one round (null clears) and trace that round's moments in time order. */
+  function highlight(i) {
+    for (const d of layer.dots) d.g.classList.toggle("dim", i != null && d.p.round !== i);
+    for (const k of layer.kills) k.g.classList.toggle("dim", i != null && k.k.round !== i);
+    tracePath(i, tl ? tl.time : Infinity);
+  }
+
+  function tracePath(i, t) {
+    if (i == null) { layer.path.setAttribute("points", ""); return; }
+    const pts = layer.dots.filter((d) => d.p.round === i && d.p.t <= t).sort((a, b) => a.p.t - b.p.t).map((d) => d.p.at.join(","));
+    layer.path.setAttribute("points", pts.join(" "));
+  }
+
+  function watchRound(i) {
+    st.round = i;
+    renderNav();
+    if (i == null) { highlight(null); tl?.set(tl.time); return; }
+    for (const d of layer.dots) d.g.classList.remove("dim");
+    for (const k of layer.kills) k.g.classList.remove("dim");
+    tl?.pause();
+    tl?.set(0);
+    setTimeout(() => alive && st.round === i && tl?.play(), 250);
+  }
+
+  function step(dir) {
+    if (!order.length) return;
+    const pos = st.round == null ? -1 : order.indexOf(st.round);
+    watchRound(order[(pos + dir + order.length) % order.length]);
+  }
+
+  function renderNav() {
+    const nav = ui.live.querySelector("#rnav");
+    if (!nav) return;
+    if (st.round == null) {
+      nav.innerHTML = `<span><b>${order.length}</b> round${order.length === 1 ? "" : "s"} overlaid by time in round</span>
+        ${order.length ? `<button type="button" data-act="watch">Watch one round ›</button>` : ""}`;
+    } else {
+      const r = data.rounds[st.round];
+      nav.innerHTML = `<div class="rstep"><button type="button" data-act="prev" aria-label="Previous round">‹</button>
+        <b>Round ${rank.get(st.round)} of ${order.length}</b><button type="button" data-act="next" aria-label="Next round">›</button>
+        <button type="button" data-act="all" class="rall">All rounds ✕</button></div>
+        <div class="rsub">${esc(r.holder || "")}${r.agent ? ` (${esc(title(r.agent))})` : ""} · map round ${r.round_num} vs ${esc(r.opponent)} · ${esc(r.date)} ·
+          <span class="${r.won ? "won" : "lost"}">${r.won ? "won" : "lost"}</span></div>`;
+    }
+  }
+
+  const live = new AbortController();
+  ui.live.addEventListener("click", (e) => {
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "watch") step(1);
+    else if (act === "prev") step(-1);
+    else if (act === "next") step(1);
+    else if (act === "all") watchRound(null);
+  }, { signal: live.signal });
+  addEventListener("keydown", (e) => {
+    if (e.target.closest?.("input, textarea") || !document.getElementById("palette").hidden) return;
+    if (e.key === "]") step(1);
+    else if (e.key === "[") step(-1);
+    else if (e.key === "Escape" && st.round != null) watchRound(null);
+  }, { signal: live.signal });
 
   function note(m) {
     let msg = "";
@@ -185,10 +274,11 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
   function draw(t, mode) {
     if (!layer) return;
     const m = data.maps[st.map];
+    const only = st.round;
     const seen = new Set(), areas = new Map();
     for (const d of layer.dots) {
       const age = t - d.p.t;
-      const on = age >= 0 && (mode === "build" || age <= MOMENT);
+      const on = (only == null || d.p.round === only) && age >= 0 && (mode === "build" || age <= MOMENT);
       const op = !on ? 0 : mode === "build" ? 1 : 1 - (age / MOMENT) * 0.85;
       if (op !== d.shown) { d.g.setAttribute("opacity", op); d.shown = op; }
       if (on) {
@@ -199,24 +289,46 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
     let kills = 0;
     for (const k of layer.kills) {
       const age = t - k.k.t;
-      const visible = age >= 0 && (mode === "build" || age <= MOMENT);
+      const visible = (only == null || k.k.round === only) && age >= 0 && (mode === "build" || age <= MOMENT);
       const q = Math.max(0, Math.min(1, age / 1.2));
       k.g.setAttribute("opacity", visible ? (mode === "build" ? 1 : 1 - (age / MOMENT) * 0.7) : 0);
       k.ln.setAttribute("stroke-dashoffset", 1 - q);
       k.x.setAttribute("opacity", q >= 1 ? 1 : 0);
       if (visible && q >= 1) kills++;
     }
+    if (only != null) tracePath(only, t);
+    const body = ui.live.querySelector("#lbody");
+    if (body) body.innerHTML = only != null ? story(only, t) : summary(m, t, mode, seen, areas, kills);
+    ui.live.classList.toggle("in", !!m.gun_rounds);
+    ui.stage.classList.toggle("carded", !!m.gun_rounds);
+  }
+
+  function summary(m, t, mode, seen, areas, kills) {
+    if (!m.gun_rounds) return "";
     const top = [...areas.entries()].map(([a, s]) => [a, s.size]).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const span = mode === "build" ? `by ${clockLabel(t)}` : `${clockLabel(Math.max(0, t - MOMENT))}–${clockLabel(t)}`;
-    ui.live.innerHTML = m.gun_rounds ? `
-      <div class="k">Where the holder is · ${span}</div>
+    return `<div class="k">Where the holder is · ${span}</div>
       <div class="seen"><b>${seen.size}</b> of ${m.gun_rounds} ${esc(data.gun)} rounds seen · <b>${kills}</b> kill${kills === 1 ? "" : "s"}</div>
       ${top.length ? `<ol>${top.map(([a, n]) => `<li><span>${esc(a)}</span><span class="mbar"><i style="width:${(n / Math.max(1, seen.size)) * 100}%"></i></span>
         <span>${n} of ${seen.size}</span></li>`).join("")}</ol>` : `<p>No recorded moments yet.</p>`}
       <p class="fine">A round counts as seen when the holder dealt damage, took damage or used an ability (with any weapon), the only
-        moments GRID records a position (±1–4 m). Missed shots and quiet holds leave no dot.</p>` : "";
-    ui.live.classList.toggle("in", !!m.gun_rounds);
-    ui.stage.classList.toggle("carded", !!m.gun_rounds);
+        moments GRID records a position (±1–4 m). Missed shots and quiet holds leave no dot. Hover a dot to see its round; click to watch it.</p>`;
+  }
+
+  /** One round, told as a timeline of what GRID recorded. */
+  function story(i, t) {
+    const m = data.maps[st.map];
+    const ev = m.positions.filter((p) => p.round === i).map((p) => ({ t: p.t, area: p.area, lines: p.what || [] }));
+    for (const k of m.kills.filter((k) => k.round === i)) {
+      if (!ev.some((e) => Math.abs(e.t - k.t) < 0.05 && e.lines.some((l) => l.startsWith("killed")))) {
+        ev.push({ t: k.t, area: null, lines: [`${k.player} killed ${k.victim || "an enemy"} with the ${data.gun}`] });
+      }
+    }
+    ev.sort((a, b) => a.t - b.t);
+    return `<div class="k">What GRID recorded in this round</div><ol class="rstory">${ev.map((e) => `
+      <li class="${e.t <= t ? "past" : ""}${e.t <= t && t - e.t < 2 ? " now" : ""}"><span class="st">${clockLabel(e.t)}</span>
+        <span>${e.area ? `<b>${esc(e.area)}</b> · ` : ""}${e.lines.map(esc).join("; ")}</span></li>`).join("")}</ol>
+      <p class="fine">Gaps between lines are moments with no damage dealt, damage taken or ability used. [ and ] step rounds.</p>`;
   }
 
   function pickMap(name) {
@@ -240,5 +352,8 @@ export function renderOperator(ui, { team, filters, params, setParams, tip }) {
   ui.zoom((f) => map?.focus(f > 1 ? [(map.base[0] + map.base[2] / 2), (map.base[1] + map.base[3] / 2)] : null, f, 400));
 
   load();
-  return () => { alive = false; tl?.destroy(); tl = null; ui.live.classList.remove("in"); ui.stage.classList.remove("carded"); ui.setBadges(null); };
+  return () => {
+    alive = false; live.abort(); tl?.destroy(); tl = null;
+    ui.live.classList.remove("in"); ui.live.innerHTML = ""; ui.stage.classList.remove("carded"); ui.setBadges(null);
+  };
 }
