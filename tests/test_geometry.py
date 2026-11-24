@@ -102,7 +102,11 @@ def _minimap_image() -> np.ndarray:
     img[5:95, 5:95] = (118, 118, 118, 255)
     img[18:42, 18:42] = (152, 152, 118, 255)   # zone round site A (minimap 300, 300)
     img[58:82, 58:82] = (152, 152, 118, 255)   # zone round site B (minimap 700, 700)
+    img[5:25, 75:95] = 0                       # a notch out of one corner, so no turn looks like another
     return img
+
+
+NOTCH, OPPOSITE = (850, 150), (150, 850)       # unrotated minimap units (10 per px): off the floor / on it
 
 
 @pytest.fixture
@@ -155,6 +159,9 @@ def test_every_layer_shares_one_rotation_with_attackers_at_the_bottom(geo_map, a
     for s in g["sites"]:
         assert G.inside(s["at"], [zones[s["name"]]])
         assert G.inside(s["at"], g["rings"])
+    # the floor itself turned by exactly `turns` (the notch is where the turn puts it, not where another one would)
+    assert not G.inside([float(c) for c in G.rotate(*NOTCH, turns)], g["rings"])
+    assert G.inside([float(c) for c in G.rotate(*OPPOSITE, turns)], g["rings"])
 
 
 def test_offline_fallback_is_not_cached_for_good_and_its_view_keeps_every_marker(geo_map, monkeypatch):
