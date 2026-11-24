@@ -89,7 +89,7 @@ CSS = f"""
 <style>
 /* ---- chrome ---- */
 header[data-testid="stHeader"] {{background:rgba(11,15,20,.94);border-bottom:1px solid {BORDER};backdrop-filter:blur(6px);}}
-.block-container {{padding-top:2.2rem;}}
+.block-container, [data-testid="stMainBlockContainer"] {{padding-top:4.6rem;}}  /* clears the top nav bar */
 h1, h2, h3 {{letter-spacing:.02em;}}
 h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} !important;letter-spacing:.14em;
          border-bottom:1px solid {BORDER};padding-bottom:.35rem !important;margin-top:1.2rem;}}
@@ -166,6 +166,19 @@ h2, h3 {{text-transform:uppercase;font-size:1.05rem !important;color:{TEXT_DIM} 
 .ops-anat-row {{position:relative;font-family:'JetBrains Mono',monospace;font-size:.75rem;}}
 .ops-anat-lbl {{position:absolute;white-space:nowrap;transform:translateX(-6px);}}
 
+/* ---- briefing ---- */
+.ops-brief {{height:100%;margin-bottom:0;}}
+.ops-rows {{border-top:1px solid {BORDER};}}
+.ops-row {{border-bottom:1px solid {BORDER};}}
+.ops-row summary {{list-style:none;display:flex;align-items:center;gap:12px;padding:9px 6px;cursor:pointer;}}
+.ops-row summary::-webkit-details-marker {{display:none;}}
+.ops-row summary::after {{content:"›";color:{TEXT_FAINT};margin-left:4px;transition:transform .15s;}}
+.ops-row[open] summary::after {{transform:rotate(90deg);}}
+.ops-row summary:hover {{background:{PANEL};}}
+.ops-row-h {{flex:1;color:#fff;font-weight:500;}}
+.ops-row-m {{color:{TEXT_FAINT};font-family:'JetBrains Mono',monospace;font-size:.75rem;white-space:nowrap;}}
+.ops-row-d {{padding:0 8px 12px 46px;color:#c3d0dc;font-size:.9rem;line-height:1.45;}}
+
 /* ---- headline finding and game plan ---- */
 .ops-hero {{background:{PANEL};border:1px solid {BORDER};padding:16px 20px;margin-bottom:6px;animation:ops-in .35s ease-out;}}
 .ops-hero-text {{font-size:1.15rem;color:#fff;line-height:1.4;margin:6px 0 10px;}}
@@ -207,25 +220,41 @@ def dossier_header(kicker: str, title: str, chips: list[str] | None = None, chip
     )
 
 
-def headline_card(ins, kicker: str = "#1 thing to know", sentence: str | None = None) -> None:
-    """The single strongest tendency, big, with its evidence bar."""
+def brief_card(s, number: int, self_scout: bool = False) -> None:
+    """One of the report's top findings: number, side and map, the big rate, the advice, and its evidence bar."""
+    ins = s.evidence
     color = CATEGORY_COLORS.get(ins.category, ACCENT)
-    side = _side_word(ins.side)
     lr = ins.league_rate
+    badge = side_badge(_side_word(ins.side)) if self_scout else f"<span>you</span>{side_badge(s.phase)}"
     peer = f'{getattr(ins, "peers", "others")} {lr:.0%}' if lr is not None else ""
     st.markdown(
-        f'<div class="ops-hero ops-cut" style="border-left:3px solid {color}">'
-        f'<div class="ops-kicker" style="color:{AMBER}">{kicker}</div>'
-        f'<div class="ops-hero-text">{sentence or ins.text}</div>'
-        f'<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'
+        f'<div class="ops-hero ops-cut ops-brief" style="border-top:2px solid {color}">'
+        f'<div class="ops-meta" style="margin-top:0"><span class="ops-plan-n" style="color:{color};font-size:1.1rem">'
+        f'{number:02d}</span>{badge}<span>{category_tag(ins.category)}</span><span>· {ins.map.title()}</span></div>'
+        f'<div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 2px">'
         f'<span class="ops-hero-num" style="color:{color}">{pct(ins.k, ins.n):.0%}</span>'
-        f'<span class="ops-sample">{ins.sample}</span>'
-        f'<span class="ops-ctx" style="margin-left:auto">{peer}</span></div>'
+        f'<span class="ops-sample">{ins.sample}</span></div>'
+        f'<div class="ops-plan-h" style="margin:6px 0 8px">{s.headline}</div>'
         f'{evidence_bar(ins.k, ins.n, lr, color, getattr(ins, "peers", "typical"))}'
-        f'<div class="ops-meta">{side_badge(side)}<span>{category_tag(ins.category)}</span>'
-        f'<span>· {ins.map.title()}</span><span>· bar: shaded = 95% range, grey tick = comparison</span></div></div>',
+        f'<div class="ops-ctx">{peer}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def plan_rows(plan: list, start: int, self_scout: bool = False) -> None:
+    """The rest of the game plan as one-line rows; click a row for the detail and its evidence."""
+    rows = []
+    for n, s in enumerate(plan, start):
+        ins = s.evidence
+        color = CATEGORY_COLORS.get(ins.category, TEXT_DIM)
+        badge = side_badge(_side_word(ins.side)) if self_scout else side_badge(s.phase)
+        rows.append(
+            f'<details class="ops-row"><summary><span class="ops-plan-n" style="color:{color};font-size:1rem">{n:02d}</span>'
+            f'<span class="ops-row-h">{s.headline}</span><span class="ops-row-m">{badge} {ins.map.title()} · '
+            f'{ins.k}/{ins.n}</span></summary>'
+            f'<div class="ops-row-d">{s.detail}<div class="ops-meta">{category_tag(ins.category)} · {ins.sample}</div>'
+            f'</div></details>')
+    st.markdown('<div class="ops-rows">' + "".join(rows) + "</div>", unsafe_allow_html=True)
 
 
 def insight_card(ins) -> None:
@@ -244,24 +273,6 @@ def insight_card(ins) -> None:
         f'<div style="color:{TEXT};margin:8px 0 4px 0;line-height:1.42;font-size:.93rem">{ins.text}</div>'
         f'{evidence_bar(ins.k, ins.n, lr, color, getattr(ins, "peers", "typical"))}'
         f'<div class="ops-ctx">{ins.sample}{league}</div>{former}</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def suggestion_card(s, number: int, self_scout: bool = False) -> None:
-    """An anti-strat suggestion with the evidence it came from."""
-    ins = s.evidence
-    color = CATEGORY_COLORS.get(ins.category, TEXT_DIM)
-    # Opponent mode: the side you play against it (their defense is your attack). Self-scout: the team's own side.
-    badge = side_badge(_side_word(ins.side)) if self_scout else f"<span>you</span>{side_badge(s.phase)}"
-    st.markdown(
-        f'<div class="ops-plan ops-cut">'
-        f'<div class="ops-plan-n" style="color:{color}">{number:02d}</div>'
-        f'<div style="min-width:0"><div class="ops-plan-h">{s.headline}</div>'
-        f'<div class="ops-plan-d">{s.detail}</div>'
-        f'<div class="ops-meta">{badge}<span>{category_tag(ins.category)}</span>'
-        f'<span>· {ins.map.title()}</span><span>· {ins.sample}</span></div>'
-        f'</div></div>',
         unsafe_allow_html=True,
     )
 

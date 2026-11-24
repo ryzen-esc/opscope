@@ -31,7 +31,7 @@ def _open(ins, report_map_key: str) -> None:
         st.session_state[_GOTO] = "views/utility.py"
     else:  # plant site: stay on the report, show that map in the breakdown
         st.session_state[report_map_key] = ins.map
-        st.toast(f"Map breakdown below now shows {ins.map.title()}.")
+        st.toast(f"The Map breakdown tab (under Details) now shows {ins.map.title()}.")
 
 
 def link_label(ins) -> str:
