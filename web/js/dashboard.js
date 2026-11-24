@@ -3,12 +3,13 @@
 import { api } from "./api.js";
 import { renderBriefing } from "./briefing.js";
 import { renderOperator } from "./operator.js";
+import { renderUtility } from "./utility.js";
 import { lenisStart, lenisStop } from "./motion.js";
 import { esc } from "./overview.js";
 import { segment, tooltip } from "./ui.js";
 
 const SOON = '<i class="tsoon">soon</i>';
-const TABS = [["briefing", "Briefing"], ["operator", "Operator"], ["utility", `Utility${SOON}`], ["pool", `Map pool${SOON}`]];
+const TABS = [["briefing", "Briefing"], ["operator", "Operator"], ["utility", "Utility"], ["pool", `Map pool${SOON}`]];
 const SIDES = [["both", "Both"], ["attacker", "Attack"], ["defender", "Defense"]];
 const title = (s) => String(s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -108,14 +109,18 @@ export async function renderDashboard(app, { meta, team, filters, params, setPar
       disposeTab = renderOperator(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip });
       return;
     }
+    if (k === "utility") {
+      ui.rail.scrollTop = 0;
+      disposeTab = renderUtility(ui, { team, filters, params: new URLSearchParams(location.search), setParams, tip });
+      return;
+    }
     if (k === "briefing") {
       ui.setSide(new URLSearchParams(location.search).get("side") || "both");
       ui.legend.innerHTML = `<span><i class="dia" style="--c:var(--def)"></i>Utility habit spot</span><span><i style="--c:transparent;border:2px solid var(--def)"></i>Gun choice, usual area</span>
         <span><i class="zone"></i>Bomb site · their plant count</span><span style="color:var(--faint)">Blue = defense, red = attack</span>`;
       disposeTab = renderBriefing(ui, { rep, params: new URLSearchParams(location.search), setParams, tip, goTab, filterBanner });
     } else {
-      const names = { utility: ["Utility profiler", "Step 6: where utility goes, habit spots and landings, on the timeline."],
-        pool: ["Map pool", "Step 7: every map with attack and defense win rates."] };
+      const names = { pool: ["Map pool", "Step 7: every map with attack and defense win rates."] };
       ui.rail.innerHTML = `<div class="tab-soon"><div><div class="kicker">Next build steps</div><h3>${names[k][0]}</h3><p>${names[k][1]}</p></div></div>`;
       ui.svg.innerHTML = ""; ui.hud.innerHTML = ""; ui.strip.innerHTML = "";
       disposeTab = () => {};

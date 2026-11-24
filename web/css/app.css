@@ -414,3 +414,20 @@ body.board .progress { display: none }
 .tip-hint { font-size: 11px; color: var(--def); margin-top: 3px }
 .live .rstory li { grid-template-columns: 44px 1fr; gap: 8px; font-size: 12px }
 .live .rstory li span:last-child { text-align: left; font: 12px/1.45 var(--body); color: inherit }
+
+/* ---- Utility tab --------------------------------------------------------------------------------------- */
+.toggles { display: flex; gap: 16px; margin-top: 10px; font-size: 12.5px; color: var(--dim) }
+.toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer } .toggles input { accent-color: var(--def) }
+.habits { list-style: none } .habits li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; font-size: 13px; line-height: 1.45; color: #c9d3dd;
+  padding: 6px 8px; margin: 0 -8px; border-radius: 5px; cursor: pointer }
+.habits li:hover { background: rgba(255, 255, 255, .04) } .habits li.on { background: var(--panel2) } .habits b { color: #fff }
+.habits .hmk { font-size: 15px; color: #fff }
+.fs.five { grid-template-columns: repeat(5, 1fr) }
+.who { width: 100%; border-collapse: collapse; font-size: 12px }
+.who th { font: 600 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); text-align: left; padding: 4px 4px 6px 0 }
+.who td { padding: 5px 4px 5px 0; border-top: 1px solid var(--line); color: #c9d3dd } .who td small { color: var(--faint) }
+.who td:nth-child(n+3), .who th:nth-child(n+3) { text-align: right; font-family: var(--mono) }
+.who td i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 6px }
+.legend .lg-ab { background: none; border: 0; color: var(--dim); font: 11px var(--mono); display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 0 }
+.legend .lg-ab:hover { color: #fff } .legend .lg-ab.off { opacity: .35; text-decoration: line-through } .legend .lg-ab small { color: var(--faint) }
+.hring { cursor: pointer } .hring.on circle { stroke: var(--amb); stroke-width: 2.2 }

@@ -40,7 +40,7 @@ BLUR_THRESHOLD = 0.35  # ...and this cut decides where the smoothed floor ends
 MIN_PART_CELLS = 120  # floor patches smaller than this (~30 m²) are dropped; wall blocks smaller are filled
 RDP_EPS_CELLS = 2.0   # simplification tolerance (1 m)
 SNAP_DEG = 13         # snap a wall to the nearest 45° step when it is this close
-GEOMETRY_VERSION = 4
+GEOMETRY_VERSION = 5
 MAPS_API = "https://valorant-api.com/v1/maps"
 ICON_PX = 1024
 
@@ -439,6 +439,7 @@ def map_geometry(map_name: str, refresh: bool = False) -> dict:
         site_areas.append({"name": near["name"] if near else None, "ring": ring})
     g = {
         "version": GEOMETRY_VERSION, "map": map_name, "source": source, "turns": k, "rings": rings,
+        "units_per_m": round(SCALE * abs(transforms()[map_name]["x_mult"]) * 100, 3),  # map units per metre
         "props": layers["props"], "site_areas": site_areas,
         "bbox": [float(allp[:, 0].min()), float(allp[:, 1].min()), float(allp[:, 0].max()), float(allp[:, 1].max())],
         "spawns": {side: pt(*xy) for side, xy in spawns(map_name).items()},

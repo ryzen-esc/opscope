@@ -354,9 +354,11 @@ def operator(scope: Scope) -> dict:
 
 def _round_info(r, rounds_index: dict) -> list[dict]:
     """Who, against whom, when and how it ended, for every round the payload's dots and kills come from (list
-    position = the `round` index used on positions and kills)."""
+    position = the `round` index used on positions and kills). Holder fields are filled on the Operator page only."""
     tr = r.rounds.set_index(["game_id", "round_num"])
-    hold = r.holders.drop_duplicates(["game_id", "round_num"]).set_index(["game_id", "round_num"])
+    holders = getattr(r, "holders", None)
+    hold = (holders.drop_duplicates(["game_id", "round_num"]).set_index(["game_id", "round_num"]) if holders is not None
+            else pd.DataFrame())
     out = [None] * len(rounds_index)
     for (g, rn), i in rounds_index.items():
         row = tr.loc[(g, rn)] if (g, rn) in tr.index else None
@@ -401,6 +403,7 @@ def utility(scope: UtilityScope) -> dict:
     for m in played.index:
         c = casts[casts["map"] == m]
         u, v = _view(m, c["x"], c["y"])
+        area = nearest_callout(m, c["x"], c["y"]) if len(c) else []
         has_aim = c[["view_x", "view_y"]].notna().all(axis=1).to_numpy()
         norm = np.hypot(c["view_x"].fillna(0), c["view_y"].fillna(0)).replace(0, 1)
         au, av = _view(m, c["x"] + AIM_CM * c["view_x"].fillna(0) / norm, c["y"] + AIM_CM * c["view_y"].fillna(0) / norm)
@@ -413,7 +416,7 @@ def utility(scope: UtilityScope) -> dict:
             "rounds": int(played[m]),
             "rounds_with_casts": int(c["round_key"].nunique()),
             "casts": [{"at": [float(u[i]), float(v[i])], "t": _r(t), "phase": ph, "round": ri, "player": p, "agent": ag,
-                       "ability": ab, "ability_name": pretty(ab), "class": cl,
+                       "ability": ab, "ability_name": pretty(ab), "class": cl, "area": area[i],
                        "aim": [float(au[i]), float(av[i])] if has_aim[i] else None,
                        "land": [float(lu[i]), float(lv[i])] if has_land[i] else None}
                       for i, (t, ph, ri, p, ag, ab, cl) in enumerate(zip(
@@ -432,4 +435,4 @@ def utility(scope: UtilityScope) -> dict:
     return {"team": scope.team_id, "name": team_name(scope.team_id), "side": scope.side, "unit": unit, "empty": False,
             "classes": list(scope.classes), "phases": list(scope.phases),
             "landing": {"median_model_m": val.get("median_model_m"), "median_cast_m": val.get("median_cast_m")},
-            "maps_order": list(played.index), "maps": per_map}
+            "maps_order": list(played.index), "rounds": _round_info(rep, rounds_index), "maps": per_map}

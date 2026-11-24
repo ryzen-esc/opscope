@@ -92,3 +92,4 @@ def test_every_endpoint_answers_with_the_documented_figures(real):
     lot = ut["maps"]["lotus"]
     assert lot["casts"] and lot["habits"] and lot["who"]
     assert any(c["phase"] == "buy" and c["t"] <= 0 for c in lot["casts"])  # pre-round setups play before 0:00
+    assert ut["rounds"][lot["casts"][0]["round"]]["opponent"] and "area" in lot["casts"][0]
